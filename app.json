@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "TaskRabbit Clone",
+    "slug": "taskrabbit-clone",
+    "scheme": "taskrabbitclone",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.taskrabbitclone",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to show tasks near you and let taskers find nearby jobs."
+      }
+    },
+    "android": {
+      "package": "com.example.taskrabbitclone",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "We use your location to show tasks near you and let taskers find nearby jobs."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.example.taskrabbitclone",
+          "enableGooglePay": false
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
