@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../supabase";
+import { uploadImageFromUri } from "../storage";
 import type { NearbyTask, Task } from "../types";
 
 export function useNearbyTasks(params: {
@@ -82,6 +83,7 @@ interface NewTaskInput {
   addressText: string;
   lat: number;
   lng: number;
+  imageUri?: string;
 }
 
 export function useCreateTask() {
@@ -103,7 +105,22 @@ export function useCreateTask() {
         .select()
         .single();
       if (error) throw error;
-      return data as Task;
+      let task = data as Task;
+
+      if (input.imageUri) {
+        const extension = input.imageUri.split(".").pop() ?? "jpg";
+        const imageUrl = await uploadImageFromUri("task-images", `${task.id}/photo.${extension}`, input.imageUri);
+        const { data: updated, error: updateError } = await supabase
+          .from("tasks")
+          .update({ image_url: imageUrl })
+          .eq("id", task.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        task = updated as Task;
+      }
+
+      return task;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-posted-tasks"] });

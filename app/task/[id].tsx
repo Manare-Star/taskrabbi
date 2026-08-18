@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { useCancelTask, useTask } from "../../lib/queries/tasks";
 import { useAcceptBid, useBidsForTask, useMyBidOnTask, usePlaceBid } from "../../lib/queries/bids";
 import { useThreadForTask } from "../../lib/queries/chat";
+import { useProfile } from "../../lib/queries/profiles";
+import { useMyRatingForTask, useSubmitRating } from "../../lib/queries/ratings";
 import { Button } from "../../components/Button";
 import { FormInput } from "../../components/FormInput";
 import { StarRating } from "../../components/StarRating";
+import { StarRatingInput } from "../../components/StarRatingInput";
 import { EmptyState } from "../../components/EmptyState";
 import { colors, radius, shadow, spacing, statusColors, typography } from "../../lib/theme";
 import type { BidWithTasker } from "../../lib/types";
@@ -17,15 +20,22 @@ export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
 
-  const { data: task, isLoading: taskLoading } = useTask(id);
+  const { data: task, isLoading: taskLoading, isRefetching: taskRefetching, refetch: refetchTask } = useTask(id);
   const isOwner = !!profile && !!task && profile.id === task.client_id;
 
-  const { data: bids, isLoading: bidsLoading } = useBidsForTask(isOwner ? id : undefined);
-  const { data: myBid } = useMyBidOnTask(!isOwner ? id : undefined, profile?.id);
+  const { data: bids, isLoading: bidsLoading, isRefetching: bidsRefetching, refetch: refetchBids } = useBidsForTask(
+    isOwner ? id : undefined
+  );
+  const { data: myBid, isRefetching: myBidRefetching, refetch: refetchMyBid } = useMyBidOnTask(
+    !isOwner ? id : undefined,
+    profile?.id
+  );
   const { data: thread } = useThreadForTask(task?.status === "assigned" || task?.status === "completed" ? id : undefined);
+  const { data: clientProfile } = useProfile(!isOwner && task?.status === "completed" ? task?.client_id : undefined);
 
   const acceptBid = useAcceptBid();
   const cancelTask = useCancelTask();
+  const acceptedBid = isOwner ? bids?.find((b) => b.status === "accepted") : undefined;
 
   const previousBidStatus = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -73,9 +83,18 @@ export default function TaskDetailScreen() {
   };
 
   const status = statusColors[task.status];
+  const isRefreshing = taskRefetching || bidsRefetching || myBidRefetching;
+  const onRefresh = () => {
+    refetchTask();
+    if (isOwner) refetchBids();
+    else refetchMyBid();
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.headerRow}>
         <Text style={styles.title}>{task.title}</Text>
         <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
@@ -86,6 +105,7 @@ export default function TaskDetailScreen() {
       <Text style={styles.meta}>
         {task.category} · {task.address_text}
       </Text>
+      {task.image_url && <Image source={{ uri: task.image_url }} style={styles.image} />}
       <Text style={styles.description}>{task.description}</Text>
 
       {(task.status === "assigned" || task.status === "completed") && thread && (
@@ -139,7 +159,82 @@ export default function TaskDetailScreen() {
       ) : (
         task.status === "open" && <BidForm taskId={task.id} existingBid={myBid} />
       )}
+
+      {task.status === "completed" && profile && isOwner && acceptedBid && (
+        <RatingSection
+          taskId={task.id}
+          currentUserId={profile.id}
+          ratee={{ id: acceptedBid.tasker.id, full_name: acceptedBid.tasker.full_name }}
+        />
+      )}
+      {task.status === "completed" && profile && !isOwner && myBid?.status === "accepted" && clientProfile && (
+        <RatingSection
+          taskId={task.id}
+          currentUserId={profile.id}
+          ratee={{ id: clientProfile.id, full_name: clientProfile.full_name }}
+        />
+      )}
     </ScrollView>
+  );
+}
+
+function RatingSection({
+  taskId,
+  currentUserId,
+  ratee,
+}: {
+  taskId: string;
+  currentUserId: string;
+  ratee: { id: string; full_name: string };
+}) {
+  const { data: myRating, isLoading } = useMyRatingForTask(taskId, currentUserId);
+  const submitRating = useSubmitRating();
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
+
+  if (isLoading) return null;
+
+  if (myRating) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Your rating of {ratee.full_name}</Text>
+        <View style={styles.bidCard}>
+          <StarRatingInput value={myRating.stars} onChange={() => {}} size={22} />
+          {myRating.comment ? <Text style={styles.bidMessage}>{myRating.comment}</Text> : null}
+        </View>
+      </View>
+    );
+  }
+
+  const onSubmit = async () => {
+    if (stars < 1) {
+      Alert.alert("Pick a rating", "Tap a star from 1 to 5.");
+      return;
+    }
+    try {
+      await submitRating.mutateAsync({ taskId, rateeId: ratee.id, stars, comment: comment.trim() || undefined });
+    } catch (err) {
+      Alert.alert("Couldn't submit rating", getErrorMessage(err));
+    }
+  };
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Rate {ratee.full_name}</Text>
+      <View style={styles.bidCard}>
+        <StarRatingInput value={stars} onChange={setStars} />
+        <FormInput
+          label="Comment (optional)"
+          value={comment}
+          onChangeText={setComment}
+          placeholder="How did it go?"
+          multiline
+          numberOfLines={2}
+          style={styles.multiline}
+        />
+        <Button title="Submit rating" onPress={onSubmit} loading={submitRating.isPending} />
+      </View>
+    </View>
   );
 }
 
@@ -202,6 +297,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, fontSize: 24, color: colors.text, flex: 1 },
   budget: { ...typography.h2, fontSize: 20, color: colors.primary, marginTop: spacing.xs },
   meta: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
+  image: { width: "100%", height: 200, borderRadius: radius.md, marginTop: spacing.md, backgroundColor: colors.surfaceAlt },
   description: { ...typography.body, color: colors.text, marginTop: spacing.md, lineHeight: 22 },
   actionSpacer: { marginTop: spacing.md },
   section: { marginTop: spacing.xl, gap: spacing.sm },

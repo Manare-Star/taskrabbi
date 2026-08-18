@@ -1,19 +1,20 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { useMyThreads } from "../../lib/queries/chat";
 import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/SkeletonCard";
 import { colors, radius, shadow, spacing, statusColors, typography } from "../../lib/theme";
 
 export default function MessagesScreen() {
   const { profile } = useAuth();
-  const { data: threads, isLoading } = useMyThreads(profile?.id);
+  const { data: threads, isLoading, isRefetching, refetch } = useMyThreads(profile?.id);
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.primary} />
+      <View style={styles.listContent}>
+        <SkeletonList />
       </View>
     );
   }
@@ -23,6 +24,7 @@ export default function MessagesScreen() {
       data={threads}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       ListEmptyComponent={
         <EmptyState
           icon="chatbubble-ellipses-outline"
@@ -57,7 +59,6 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   listContent: { padding: spacing.md, flexGrow: 1 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
   row: {
     flexDirection: "row",
     alignItems: "center",

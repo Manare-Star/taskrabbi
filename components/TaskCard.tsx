@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadow, spacing, statusColors, typography } from "../lib/theme";
 import type { Task } from "../lib/types";
 
@@ -19,6 +19,7 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      {task.image_url && <Image source={{ uri: task.image_url }} style={styles.image} />}
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>
           {task.title}
@@ -52,6 +53,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   pressed: { opacity: 0.92, transform: [{ scale: 0.995 }] },
+  image: { width: "100%", height: 140, borderRadius: radius.sm, marginBottom: spacing.sm, backgroundColor: colors.surfaceAlt },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   title: { ...typography.h3, color: colors.text, flex: 1, marginRight: spacing.sm },
   budget: { ...typography.h3, color: colors.primary },

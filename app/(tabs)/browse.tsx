@@ -1,18 +1,21 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { FlatList, RefreshControl, StyleSheet, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useNearbyTasks } from "../../lib/queries/tasks";
 import { TaskCard } from "../../components/TaskCard";
-import { colors, spacing } from "../../lib/theme";
+import { colors, radius, spacing } from "../../lib/theme";
 import { TASK_CATEGORIES } from "../../lib/types";
 import { CategoryFilterChips } from "../../components/CategoryFilterChips";
 import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/SkeletonCard";
 
 export default function BrowseScreen() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -32,34 +35,49 @@ export default function BrowseScreen() {
     category,
   });
 
+  const filteredTasks = useMemo(() => {
+    if (!tasks) return tasks;
+    const query = search.trim().toLowerCase();
+    if (!query) return tasks;
+    return tasks.filter(
+      (task) => task.title.toLowerCase().includes(query) || task.description.toLowerCase().includes(query)
+    );
+  }, [tasks, search]);
+
   if (locationError) {
     return <EmptyState icon="location-outline" title="Location needed" subtitle={locationError} />;
   }
 
-  if (!coords || isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.flex}>
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={18} color={colors.textFaint} />
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search tasks..."
+          placeholderTextColor={colors.textFaint}
+        />
+      </View>
       <CategoryFilterChips categories={TASK_CATEGORIES} selected={category} onSelect={setCategory} />
-      {error ? (
+      {!coords || isLoading ? (
+        <View style={styles.listContent}>
+          <SkeletonList />
+        </View>
+      ) : error ? (
         <EmptyState icon="alert-circle-outline" title="Couldn't load tasks" subtitle={(error as Error).message} />
       ) : (
         <FlatList
-          data={tasks}
+          data={filteredTasks}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListEmptyComponent={
             <EmptyState
               icon="search-outline"
-              title="No open tasks nearby"
-              subtitle="Check back soon, or try a different category."
+              title={search ? "No matching tasks" : "No open tasks nearby"}
+              subtitle={search ? "Try a different search term." : "Check back soon, or try a different category."}
             />
           }
           renderItem={({ item }) => (
@@ -74,5 +92,19 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   listContent: { padding: spacing.md },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
 });

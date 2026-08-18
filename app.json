@@ -39,7 +39,13 @@
           "enableGooglePay": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos to add a picture to your profile or task."
+        }
+      ]
     ],
     "extra": {
       "router": {

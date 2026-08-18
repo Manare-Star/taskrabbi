@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import * as Location from "expo-location";
+import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { useCreateTask } from "../../lib/queries/tasks";
@@ -22,6 +24,23 @@ export default function PostTaskScreen() {
   const [addressText, setAddressText] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const onPickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Photos access needed", "Enable photo library access to attach a picture.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setImageUri(result.assets[0].uri);
+  };
 
   const useCurrentLocation = async () => {
     setLocating(true);
@@ -65,6 +84,7 @@ export default function PostTaskScreen() {
         addressText: addressText.trim(),
         lat: coords.lat,
         lng: coords.lng,
+        imageUri: imageUri ?? undefined,
       });
       setTitle("");
       setDescription("");
@@ -72,6 +92,7 @@ export default function PostTaskScreen() {
       setCategory(null);
       setAddressText("");
       setCoords(null);
+      setImageUri(null);
       router.push(`/task/${task.id}`);
     } catch (err) {
       Alert.alert("Couldn't post task", getErrorMessage(err));
@@ -98,6 +119,18 @@ export default function PostTaskScreen() {
           keyboardType="decimal-pad"
           placeholder="50"
         />
+
+        <Text style={styles.label}>Photo (optional)</Text>
+        <Pressable style={styles.photoPicker} onPress={onPickPhoto}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.photoPreview} />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+              <Text style={styles.photoPlaceholderText}>Add a photo</Text>
+            </View>
+          )}
+        </Pressable>
 
         <Text style={styles.label}>Category</Text>
         <View style={styles.chipsBleed}>
@@ -133,6 +166,20 @@ const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
   multiline: { minHeight: 100, textAlignVertical: "top" },
   chipsBleed: { marginHorizontal: -spacing.lg, marginBottom: spacing.sm },
+  photoPicker: { marginBottom: spacing.lg },
+  photoPreview: { width: "100%", height: 160, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  photoPlaceholder: {
+    height: 100,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  photoPlaceholderText: { ...typography.caption, color: colors.textMuted },
   locationSection: { marginTop: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm },
   coordsPill: {
     alignSelf: "flex-start",

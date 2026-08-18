@@ -35,6 +35,7 @@ export interface Task {
   budget: number;
   status: TaskStatus;
   address_text: string;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,5 +80,15 @@ export interface Payment {
   stripe_payment_intent_id: string;
   amount: number;
   status: PaymentStatus;
+  created_at: string;
+}
+
+export interface Rating {
+  id: string;
+  task_id: string;
+  rater_id: string;
+  ratee_id: string;
+  stars: number;
+  comment: string | null;
   created_at: string;
 }
