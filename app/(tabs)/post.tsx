@@ -12,6 +12,7 @@ import { CategoryFilterChips } from "../../components/CategoryFilterChips";
 import { colors, radius, spacing, typography } from "../../lib/theme";
 import { TASK_CATEGORIES } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
+import { haptics } from "../../lib/haptics";
 
 export default function PostTaskScreen() {
   const { profile } = useAuth();
@@ -93,8 +94,10 @@ export default function PostTaskScreen() {
       setAddressText("");
       setCoords(null);
       setImageUri(null);
+      haptics.success();
       router.push(`/task/${task.id}`);
     } catch (err) {
+      haptics.error();
       Alert.alert("Couldn't post task", getErrorMessage(err));
     }
   };

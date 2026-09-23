@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { useCancelTask, useTask } from "../../lib/queries/tasks";
@@ -12,9 +13,11 @@ import { FormInput } from "../../components/FormInput";
 import { StarRating } from "../../components/StarRating";
 import { StarRatingInput } from "../../components/StarRatingInput";
 import { EmptyState } from "../../components/EmptyState";
+import { Avatar } from "../../components/Avatar";
 import { colors, radius, shadow, spacing, statusColors, typography } from "../../lib/theme";
 import type { BidWithTasker } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
+import { haptics } from "../../lib/haptics";
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,7 +34,8 @@ export default function TaskDetailScreen() {
     profile?.id
   );
   const { data: thread } = useThreadForTask(task?.status === "assigned" || task?.status === "completed" ? id : undefined);
-  const { data: clientProfile } = useProfile(!isOwner && task?.status === "completed" ? task?.client_id : undefined);
+  // Taskers see who posted the task (and can open their reviews) before bidding.
+  const { data: clientProfile } = useProfile(!isOwner ? task?.client_id : undefined);
 
   const acceptBid = useAcceptBid();
   const cancelTask = useCancelTask();
@@ -65,8 +69,10 @@ export default function TaskDetailScreen() {
   const onAccept = async (bidId: string) => {
     try {
       const newThread = await acceptBid.mutateAsync(bidId);
+      haptics.success();
       router.push(`/chat/${newThread.id}`);
     } catch (err) {
+      haptics.error();
       Alert.alert("Couldn't accept bid", getErrorMessage(err));
     }
   };
@@ -108,6 +114,21 @@ export default function TaskDetailScreen() {
       {task.image_url && <Image source={{ uri: task.image_url }} style={styles.image} />}
       <Text style={styles.description}>{task.description}</Text>
 
+      {!isOwner && clientProfile && (
+        <Pressable
+          style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}
+          onPress={() => router.push(`/user/${clientProfile.id}`)}
+        >
+          <Avatar name={clientProfile.full_name} url={clientProfile.avatar_url} size={36} />
+          <View style={styles.personText}>
+            <Text style={styles.personLabel}>Posted by</Text>
+            <Text style={styles.bidderName}>{clientProfile.full_name}</Text>
+          </View>
+          <StarRating rating={clientProfile.rating_avg} count={clientProfile.rating_count} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
+      )}
+
       {(task.status === "assigned" || task.status === "completed") && thread && (
         <View style={styles.actionSpacer}>
           <Button title="Open chat" variant="secondary" onPress={() => router.push(`/chat/${thread.id}`)} />
@@ -132,11 +153,18 @@ export default function TaskDetailScreen() {
               const bidStatus = statusColors[bid.status];
               return (
                 <View key={bid.id} style={styles.bidCard}>
-                  <View style={styles.bidHeader}>
-                    <Text style={styles.bidderName}>{bid.tasker.full_name}</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.bidHeader, pressed && styles.pressed]}
+                    onPress={() => router.push(`/user/${bid.tasker.id}`)}
+                  >
+                    <Avatar name={bid.tasker.full_name} url={bid.tasker.avatar_url} size={40} />
+                    <View style={styles.personText}>
+                      <Text style={styles.bidderName}>{bid.tasker.full_name}</Text>
+                      <StarRating rating={bid.tasker.rating_avg} count={bid.tasker.rating_count} />
+                    </View>
                     <Text style={styles.bidAmount}>${bid.amount.toFixed(0)}</Text>
-                  </View>
-                  <StarRating rating={bid.tasker.rating_avg} count={bid.tasker.rating_count} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </Pressable>
                   {bid.message ? <Text style={styles.bidMessage}>{bid.message}</Text> : null}
                   <View style={[styles.statusPill, { backgroundColor: bidStatus.bg, alignSelf: "flex-start" }]}>
                     <Text style={[styles.statusPillText, { color: bidStatus.fg }]}>{bid.status}</Text>
@@ -199,7 +227,7 @@ function RatingSection({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Your rating of {ratee.full_name}</Text>
         <View style={styles.bidCard}>
-          <StarRatingInput value={myRating.stars} onChange={() => {}} size={22} />
+          <StarRatingInput value={myRating.stars} size={22} disabled />
           {myRating.comment ? <Text style={styles.bidMessage}>{myRating.comment}</Text> : null}
         </View>
       </View>
@@ -213,7 +241,9 @@ function RatingSection({
     }
     try {
       await submitRating.mutateAsync({ taskId, rateeId: ratee.id, stars, comment: comment.trim() || undefined });
+      haptics.success();
     } catch (err) {
+      haptics.error();
       Alert.alert("Couldn't submit rating", getErrorMessage(err));
     }
   };
@@ -267,7 +297,9 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
     }
     try {
       await placeBid.mutateAsync({ taskId, taskerId: profile.id, amount: parsedAmount, message });
+      haptics.success();
     } catch (err) {
+      haptics.error();
       Alert.alert("Couldn't place bid", getErrorMessage(err));
     }
   };
@@ -310,7 +342,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     ...shadow.card,
   },
-  bidHeader: { flexDirection: "row", justifyContent: "space-between" },
+  bidHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  personRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.sm + 2,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+  },
+  personText: { flex: 1, gap: 2 },
+  personLabel: { fontSize: 11, color: colors.textFaint, fontWeight: "600" },
+  pressed: { opacity: 0.8 },
   bidderName: { ...typography.bodyStrong, color: colors.text },
   bidAmount: { ...typography.bodyStrong, color: colors.primary },
   bidMessage: { ...typography.body, color: colors.text },

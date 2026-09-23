@@ -42,6 +42,9 @@ export interface Task {
 
 export interface NearbyTask extends Task {
   distance_meters: number;
+  // Returned by nearby_open_tasks from migration 0012 onward; absent on older databases.
+  task_lat?: number | null;
+  task_lng?: number | null;
 }
 
 export interface Bid {

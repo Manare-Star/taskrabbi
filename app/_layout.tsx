@@ -33,6 +33,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="task/[id]" options={{ title: "Task" }} />
               <Stack.Screen name="chat/[threadId]" options={{ title: "Chat" }} />
+              <Stack.Screen name="user/[id]" options={{ title: "Profile" }} />
               <Stack.Screen name="checkout/[taskId]" options={{ title: "Checkout", presentation: "modal" }} />
             </Stack>
           </AuthProvider>

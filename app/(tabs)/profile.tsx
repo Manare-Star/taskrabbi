@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth-context";
@@ -7,8 +7,10 @@ import { useUpdateProfile, useUploadAvatar } from "../../lib/queries/profiles";
 import { Button } from "../../components/Button";
 import { FormInput } from "../../components/FormInput";
 import { StarRating } from "../../components/StarRating";
+import { Avatar } from "../../components/Avatar";
 import { colors, radius, spacing, typography } from "../../lib/theme";
 import { getErrorMessage } from "../../lib/errors";
+import { haptics } from "../../lib/haptics";
 
 const ROLE_LABEL: Record<string, string> = {
   client: "Looking for help",
@@ -31,14 +33,6 @@ export default function ProfileScreen() {
 
   if (!profile) return null;
 
-  const initials = profile.full_name
-    .split(" ")
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   const onPickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -54,6 +48,7 @@ export default function ProfileScreen() {
     if (result.canceled || !result.assets[0]) return;
     try {
       await uploadAvatar.mutateAsync({ userId: profile.id, imageUri: result.assets[0].uri });
+      haptics.success();
       await refreshProfile();
     } catch (err) {
       Alert.alert("Couldn't upload photo", getErrorMessage(err));
@@ -81,13 +76,7 @@ export default function ProfileScreen() {
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Pressable onPress={onPickAvatar} style={styles.avatarWrapper}>
-          {profile.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials || "?"}</Text>
-            </View>
-          )}
+          <Avatar name={profile.full_name} url={profile.avatar_url} size={76} />
           <View style={styles.avatarEditBadge}>
             {uploadAvatar.isPending ? (
               <ActivityIndicator size="small" color={colors.white} />
@@ -130,15 +119,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg },
   header: { alignItems: "center", marginBottom: spacing.lg },
   avatarWrapper: { marginBottom: spacing.sm },
-  avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarImage: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.surfaceAlt },
   avatarEditBadge: {
     position: "absolute",
     bottom: -2,
@@ -152,7 +132,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.background,
   },
-  avatarText: { color: colors.white, fontSize: 26, fontWeight: "700" },
   name: { ...typography.h2, fontSize: 20, color: colors.text },
   roleBadge: {
     marginTop: spacing.xs,

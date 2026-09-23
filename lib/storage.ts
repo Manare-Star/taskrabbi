@@ -14,5 +14,8 @@ export async function uploadImageFromUri(bucket: string, path: string, uri: stri
   if (error) throw error;
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  // Re-uploads overwrite the same path, so the public URL would be identical and the
+  // Image cache would keep showing the old picture. A version param makes each upload
+  // a distinct URL.
+  return `${data.publicUrl}?v=${Date.now()}`;
 }

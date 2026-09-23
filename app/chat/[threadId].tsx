@@ -11,11 +11,13 @@ import {
 } from "react-native";
 import { ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { useSendMessage, useThread, useThreadMessages } from "../../lib/queries/chat";
+import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { haptics } from "../../lib/haptics";
 import type { ChatMessage } from "../../lib/types";
 
 type ListItem = { kind: "divider"; id: string; label: string } | { kind: "message"; id: string; message: ChatMessage };
@@ -33,24 +35,20 @@ function timeLabel(date: Date): string {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function initialsOf(name: string): string {
+function ChatHeaderTitle({
+  name,
+  avatarUrl,
+  subtitle,
+  onPress,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  subtitle: string;
+  onPress?: () => void;
+}) {
   return (
-    name
-      .split(" ")
-      .map((part) => part[0])
-      .filter(Boolean)
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "?"
-  );
-}
-
-function ChatHeaderTitle({ name, subtitle }: { name: string; subtitle: string }) {
-  return (
-    <View style={styles.headerTitleRow}>
-      <View style={styles.headerAvatar}>
-        <Text style={styles.headerAvatarText}>{initialsOf(name)}</Text>
-      </View>
+    <Pressable style={styles.headerTitleRow} onPress={onPress} disabled={!onPress}>
+      <Avatar name={name} url={avatarUrl} size={34} />
       <View style={styles.headerTextCol}>
         <Text style={styles.headerName} numberOfLines={1}>
           {name}
@@ -59,7 +57,7 @@ function ChatHeaderTitle({ name, subtitle }: { name: string; subtitle: string })
           {subtitle}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -105,9 +103,11 @@ export default function ChatThreadScreen() {
     const trimmed = body.trim();
     if (!trimmed || !threadId || !profile) return;
     setBody("");
+    haptics.tap();
     try {
       await sendMessage.mutateAsync({ threadId, senderId: profile.id, body: trimmed });
     } catch {
+      haptics.error();
       setBody(trimmed);
     }
   };
@@ -129,7 +129,12 @@ export default function ChatThreadScreen() {
       <Stack.Screen
         options={{
           headerTitle: () => (
-            <ChatHeaderTitle name={otherParticipant?.full_name ?? "Chat"} subtitle={thread.task.title} />
+            <ChatHeaderTitle
+              name={otherParticipant?.full_name ?? "Chat"}
+              avatarUrl={otherParticipant?.avatar_url}
+              subtitle={thread.task.title}
+              onPress={otherParticipant ? () => router.push(`/user/${otherParticipant.id}`) : undefined}
+            />
           ),
         }}
       />
@@ -185,15 +190,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.surface },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  headerAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerAvatarText: { color: colors.white, fontWeight: "700", fontSize: 13 },
   headerTextCol: { maxWidth: 190 },
   headerName: { ...typography.bodyStrong, fontSize: 15, color: colors.text },
   headerSubtitle: { fontSize: 12, color: colors.textMuted },

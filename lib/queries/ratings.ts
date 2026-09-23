@@ -1,6 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../supabase";
-import type { Rating } from "../types";
+import type { Profile, Rating } from "../types";
+
+export type RatingWithRater = Rating & { rater: Pick<Profile, "id" | "full_name" | "avatar_url"> };
+
+export function useRatingsForUser(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["ratings-for-user", userId],
+    queryFn: async (): Promise<RatingWithRater[]> => {
+      const { data, error } = await supabase
+        .from("ratings")
+        .select("*, rater:profiles!ratings_rater_id_fkey(id, full_name, avatar_url)")
+        .eq("ratee_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as RatingWithRater[];
+    },
+    enabled: !!userId,
+  });
+}
 
 export function useMyRatingForTask(taskId: string | undefined, raterId: string | undefined) {
   return useQuery({
@@ -35,6 +53,7 @@ export function useSubmitRating() {
     onSuccess: (rating) => {
       queryClient.invalidateQueries({ queryKey: ["my-rating", rating.task_id, rating.rater_id] });
       queryClient.invalidateQueries({ queryKey: ["profile", rating.ratee_id] });
+      queryClient.invalidateQueries({ queryKey: ["ratings-for-user", rating.ratee_id] });
     },
   });
 }

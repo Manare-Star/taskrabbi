@@ -109,7 +109,13 @@ launch an iOS Simulator / Android emulator if you have one configured.
 - There's no automated test suite for this MVP — the golden path above is the acceptance
   bar. If you add automated tests later, Detox (E2E) or Jest + React Native Testing
   Library (unit/component) are the standard choices for an Expo Router app.
-- Not built yet (left for a follow-up iteration): push notifications for new bids/messages,
-  avatar/task photo uploads via Supabase Storage, and a Stripe webhook as a second,
-  server-triggered path to confirm payments (currently confirmation happens when the app
-  calls the `confirm-payment` function right after checkout).
+- The Browse map uses `react-native-maps`, which works in Expo Go as-is. A standalone
+  Android build (EAS / dev client) additionally needs a Google Maps API key configured via
+  the `react-native-maps` config plugin.
+- Supabase free-tier projects pause after a week of inactivity. If the app suddenly can't
+  reach the backend (the project URL stops resolving), restore the project from the
+  Supabase dashboard.
+- Not built yet (left for a follow-up iteration): push notifications for new bids/messages
+  (remote push no longer works in Expo Go, so this needs a development build), and a Stripe
+  webhook as a second, server-triggered path to confirm payments (currently confirmation
+  happens when the app calls the `confirm-payment` function right after checkout).

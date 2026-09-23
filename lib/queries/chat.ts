@@ -3,26 +3,63 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../supabase";
 import type { ChatMessage, ChatThread, Profile, Task } from "../types";
 
+const PARTICIPANTS_SELECT =
+  "client:profiles!chat_threads_client_id_fkey(id, full_name, avatar_url), tasker:profiles!chat_threads_tasker_id_fkey(id, full_name, avatar_url)";
+
 type ThreadWithDetails = ChatThread & {
   task: Task;
   client: Pick<Profile, "id" | "full_name" | "avatar_url">;
   tasker: Pick<Profile, "id" | "full_name" | "avatar_url">;
 };
 
+export type InboxThread = ThreadWithDetails & { lastMessage: ChatMessage | null };
+
+function lastActivity(thread: InboxThread): number {
+  return new Date(thread.lastMessage?.created_at ?? thread.created_at).getTime();
+}
+
 export function useMyThreads(userId: string | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["my-threads", userId],
-    queryFn: async (): Promise<(ChatThread & { task: Task })[]> => {
+    queryFn: async (): Promise<InboxThread[]> => {
+      // One round trip: each thread with its participants and only its newest message.
       const { data, error } = await supabase
         .from("chat_threads")
-        .select("*, task:tasks(*)")
+        .select(`*, task:tasks(*), ${PARTICIPANTS_SELECT}, chat_messages(id, thread_id, sender_id, body, created_at)`)
         .or(`client_id.eq.${userId},tasker_id.eq.${userId}`)
-        .order("created_at", { ascending: false });
+        .order("created_at", { referencedTable: "chat_messages", ascending: false })
+        .limit(1, { referencedTable: "chat_messages" });
       if (error) throw error;
-      return (data ?? []) as unknown as (ChatThread & { task: Task })[];
+
+      const rows = (data ?? []) as unknown as (ThreadWithDetails & { chat_messages: ChatMessage[] | null })[];
+      return rows
+        .map(({ chat_messages, ...thread }) => ({ ...thread, lastMessage: chat_messages?.[0] ?? null }))
+        .sort((a, b) => lastActivity(b) - lastActivity(a));
     },
     enabled: !!userId,
   });
+
+  // Any new message in one of my threads should reorder the inbox and update its preview.
+  // RLS scopes the realtime stream to threads this user can read.
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`inbox:${userId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["my-threads", userId] })
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_threads" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["my-threads", userId] })
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+
+  return query;
 }
 
 export function useThreadForTask(taskId: string | undefined) {
@@ -43,9 +80,7 @@ export function useThread(threadId: string | undefined) {
     queryFn: async (): Promise<ThreadWithDetails> => {
       const { data, error } = await supabase
         .from("chat_threads")
-        .select(
-          "*, task:tasks(*), client:profiles!chat_threads_client_id_fkey(id, full_name, avatar_url), tasker:profiles!chat_threads_tasker_id_fkey(id, full_name, avatar_url)"
-        )
+        .select(`*, task:tasks(*), ${PARTICIPANTS_SELECT}`)
         .eq("id", threadId)
         .single();
       if (error) throw error;
@@ -114,6 +149,7 @@ export function useSendMessage() {
       return data as ChatMessage;
     },
     onSuccess: (message) => {
+      queryClient.invalidateQueries({ queryKey: ["my-threads"] });
       queryClient.setQueryData<ChatMessage[]>(
         ["thread-messages", message.thread_id],
         (existing: ChatMessage[] | undefined) => {
