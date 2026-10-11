@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../supabase";
+import { realtimeChannel, supabase } from "../supabase";
 import type { Bid, BidWithTasker, ChatThread, Task } from "../types";
 
 export function useBidsForTask(taskId: string | undefined) {
@@ -22,8 +22,7 @@ export function useBidsForTask(taskId: string | undefined) {
 
   useEffect(() => {
     if (!taskId) return;
-    const channel = supabase
-      .channel(`bids-for-task:${taskId}`)
+    const channel = realtimeChannel(`bids-for-task:${taskId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bids", filter: `task_id=eq.${taskId}` },
@@ -58,8 +57,7 @@ export function useMyBidOnTask(taskId: string | undefined, taskerId: string | un
 
   useEffect(() => {
     if (!taskId || !taskerId) return;
-    const channel = supabase
-      .channel(`my-bid:${taskId}:${taskerId}`)
+    const channel = realtimeChannel(`my-bid:${taskId}:${taskerId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "bids", filter: `task_id=eq.${taskId}` },
@@ -98,8 +96,7 @@ export function useMyBids(taskerId: string | undefined) {
 
   useEffect(() => {
     if (!taskerId) return;
-    const channel = supabase
-      .channel(`my-bids:${taskerId}`)
+    const channel = realtimeChannel(`my-bids:${taskerId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bids", filter: `tasker_id=eq.${taskerId}` },

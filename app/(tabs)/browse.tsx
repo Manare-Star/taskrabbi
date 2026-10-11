@@ -4,6 +4,7 @@ import MapView, { Callout, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
+import { useAuth } from "../../lib/auth-context";
 import { useNearbyTasks } from "../../lib/queries/tasks";
 import { TaskCard } from "../../components/TaskCard";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
@@ -19,7 +20,15 @@ function hasCoords(task: NearbyTask): task is NearbyTask & { task_lat: number; t
   return Number.isFinite(task.task_lat) && Number.isFinite(task.task_lng);
 }
 
+function greetingFor(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function BrowseScreen() {
+  const { profile } = useAuth();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -56,7 +65,7 @@ export default function BrowseScreen() {
   const pinnedTasks = useMemo(() => (filteredTasks ?? []).filter(hasCoords), [filteredTasks]);
 
   if (locationError) {
-    return <EmptyState icon="location-outline" title="Location needed" subtitle={locationError} />;
+    return <EmptyState emoji="🧭" title="Where are you?" subtitle={locationError} />;
   }
 
   const toggleMode = () => {
@@ -73,7 +82,7 @@ export default function BrowseScreen() {
       );
     }
     if (error) {
-      return <EmptyState icon="alert-circle-outline" title="Couldn't load tasks" subtitle={(error as Error).message} />;
+      return <EmptyState emoji="😵‍💫" title="Couldn't load tasks" subtitle={(error as Error).message} />;
     }
 
     if (mode === "map") {
@@ -127,9 +136,9 @@ export default function BrowseScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         ListEmptyComponent={
           <EmptyState
-            icon="search-outline"
-            title={search ? "No matching tasks" : "No open tasks nearby"}
-            subtitle={search ? "Try a different search term." : "Check back soon, or try a different category."}
+            emoji={search ? "🔍" : "🌤️"}
+            title={search ? "Nothing matches that" : "All quiet nearby"}
+            subtitle={search ? "Try a different search term." : "Check back soon, or try another category."}
           />
         }
         renderItem={({ item }) => <TaskCard task={item} onPress={() => router.push(`/task/${item.id}`)} />}
@@ -137,8 +146,22 @@ export default function BrowseScreen() {
     );
   };
 
+  const firstName = profile?.full_name.split(" ")[0] || "there";
+  const count = filteredTasks?.length ?? 0;
+  const tagline = !coords || isLoading
+    ? "Finding tasks around you..."
+    : count === 0
+      ? "Quiet around here — check back soon ☕"
+      : `${count} ${count === 1 ? "task" : "tasks"} near you, ready to go`;
+
   return (
     <View style={styles.flex}>
+      <View style={styles.greeting}>
+        <Text style={styles.greetingTitle}>
+          {greetingFor(new Date())}, {firstName} 👋
+        </Text>
+        <Text style={styles.greetingSubtitle}>{tagline}</Text>
+      </View>
       <View style={styles.toolbar}>
         <View style={styles.searchRow}>
           <Ionicons name="search" size={18} color={colors.textFaint} />
@@ -167,6 +190,9 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   listContent: { padding: spacing.md },
+  greeting: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  greetingTitle: { ...typography.h2, color: colors.text },
+  greetingSubtitle: { ...typography.body, color: colors.textMuted, marginTop: 2 },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",

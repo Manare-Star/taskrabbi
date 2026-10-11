@@ -143,7 +143,7 @@ export default function ChatThreadScreen() {
         data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<EmptyState icon="hand-left-outline" title="Say hi 👋" subtitle="Start the conversation." />}
+        ListEmptyComponent={<EmptyState emoji="👋" title="Say hi!" subtitle="Break the ice and sort out the details." />}
         renderItem={({ item }) => {
           if (item.kind === "divider") {
             return (

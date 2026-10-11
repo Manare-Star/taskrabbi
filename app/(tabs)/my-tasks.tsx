@@ -40,7 +40,7 @@ export default function MyTasksScreen() {
             <RefreshControl refreshing={postedQuery.isRefetching} onRefresh={postedQuery.refetch} />
           }
           ListEmptyComponent={
-            <EmptyState icon="clipboard-outline" title="No tasks posted yet" subtitle="Post one from the Post a Task tab." />
+            <EmptyState emoji="📝" title="No tasks posted yet" subtitle="Got a to-do? Post it and let taskers come to you." />
           }
           renderItem={({ item }) => <TaskCard task={item} onPress={() => router.push(`/task/${item.id}`)} />}
         />
@@ -51,7 +51,7 @@ export default function MyTasksScreen() {
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={bidsQuery.isRefetching} onRefresh={bidsQuery.refetch} />}
           ListEmptyComponent={
-            <EmptyState icon="pricetag-outline" title="No bids placed yet" subtitle="Browse tasks nearby to place one." />
+            <EmptyState emoji="💪" title="No bids yet" subtitle="Browse nearby tasks and make your first offer." />
           }
           renderItem={({ item }) => (
             <TaskCard task={item.task} onPress={() => router.push(`/task/${item.task_id}`)} />

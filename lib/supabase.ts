@@ -1,6 +1,6 @@
 import "react-native-url-polyfill/auto";
 import * as SecureStore from "expo-secure-store";
-import { createClient, processLock } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -26,6 +26,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    lock: processLock,
   },
 });
+
+let channelSeq = 0;
+
+// supabase.channel(name) returns the *existing* channel when one with that name is already
+// open, and adding listeners to an already-subscribed channel throws. Two screens watching
+// the same row at once (e.g. the checkout modal over its task screen) would collide, so give
+// every subscriber its own channel.
+export function realtimeChannel(name: string) {
+  channelSeq += 1;
+  return supabase.channel(`${name}#${channelSeq}`);
+}

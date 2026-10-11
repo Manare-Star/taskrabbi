@@ -8,13 +8,14 @@ import { useConfirmPayment, useCreatePaymentIntent } from "../../lib/queries/pay
 import { Button } from "../../components/Button";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
 import { getErrorMessage } from "../../lib/errors";
-import { haptics } from "../../lib/haptics";
+import { useCelebrate } from "../../lib/celebration";
 
 export default function CheckoutScreen() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { data: task } = useTask(taskId);
   const createPaymentIntent = useCreatePaymentIntent();
   const confirmPayment = useConfirmPayment();
+  const celebrate = useCelebrate();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [ready, setReady] = useState(false);
@@ -55,7 +56,7 @@ export default function CheckoutScreen() {
         return;
       }
       await confirmPayment.mutateAsync({ taskId, paymentIntentId });
-      haptics.success();
+      celebrate("Paid! Task complete 🎉");
       Alert.alert("Payment successful", "The task has been marked as completed.");
       router.replace(`/task/${taskId}`);
     } catch (err) {

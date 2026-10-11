@@ -39,9 +39,9 @@ export default function MessagesScreen() {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       ListEmptyComponent={
         <EmptyState
-          icon="chatbubble-ellipses-outline"
-          title="No conversations yet"
-          subtitle="They start once a bid is accepted."
+          emoji="💬"
+          title="No chats yet"
+          subtitle="Conversations start as soon as a bid is accepted."
         />
       }
       renderItem={({ item }) => {

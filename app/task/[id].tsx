@@ -18,6 +18,8 @@ import { colors, radius, shadow, spacing, statusColors, typography } from "../..
 import type { BidWithTasker } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
+import { useCelebrate } from "../../lib/celebration";
+import { categoryStyle } from "../../lib/categories";
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +39,7 @@ export default function TaskDetailScreen() {
   // Taskers see who posted the task (and can open their reviews) before bidding.
   const { data: clientProfile } = useProfile(!isOwner ? task?.client_id : undefined);
 
+  const celebrate = useCelebrate();
   const acceptBid = useAcceptBid();
   const cancelTask = useCancelTask();
   const acceptedBid = isOwner ? bids?.find((b) => b.status === "accepted") : undefined;
@@ -47,6 +50,7 @@ export default function TaskDetailScreen() {
     const prev = previousBidStatus.current;
     if (prev && prev !== myBid.status) {
       if (myBid.status === "accepted") {
+        celebrate("Your bid won! 🏆");
         Alert.alert("Bid accepted! 🎉", "The client accepted your bid. Open the chat to coordinate details.", [
           { text: "Later", style: "cancel" },
           { text: "Open chat", onPress: () => thread && router.push(`/chat/${thread.id}`) },
@@ -56,7 +60,7 @@ export default function TaskDetailScreen() {
       }
     }
     previousBidStatus.current = myBid.status;
-  }, [myBid, thread]);
+  }, [myBid, thread, celebrate]);
 
   if (taskLoading || !task) {
     return (
@@ -69,7 +73,7 @@ export default function TaskDetailScreen() {
   const onAccept = async (bidId: string) => {
     try {
       const newThread = await acceptBid.mutateAsync(bidId);
-      haptics.success();
+      celebrate("You hired a tasker! 🤝");
       router.push(`/chat/${newThread.id}`);
     } catch (err) {
       haptics.error();
@@ -102,6 +106,9 @@ export default function TaskDetailScreen() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
+        <View style={[styles.categoryBadge, { backgroundColor: categoryStyle(task.category).tint }]}>
+          <Text style={styles.categoryEmoji}>{categoryStyle(task.category).emoji}</Text>
+        </View>
         <Text style={styles.title}>{task.title}</Text>
         <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
           <Text style={[styles.statusPillText, { color: status.fg }]}>{task.status}</Text>
@@ -147,7 +154,7 @@ export default function TaskDetailScreen() {
           {bidsLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : !bids?.length ? (
-            <EmptyState icon="people-outline" title="No bids yet" subtitle="Taskers who bid will show up here." />
+            <EmptyState emoji="⏳" title="No bids yet" subtitle="Hang tight — offers from taskers will pop up here." />
           ) : (
             bids.map((bid: BidWithTasker) => {
               const bidStatus = statusColors[bid.status];
@@ -217,6 +224,7 @@ function RatingSection({
 }) {
   const { data: myRating, isLoading } = useMyRatingForTask(taskId, currentUserId);
   const submitRating = useSubmitRating();
+  const celebrate = useCelebrate();
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
 
@@ -241,7 +249,7 @@ function RatingSection({
     }
     try {
       await submitRating.mutateAsync({ taskId, rateeId: ratee.id, stars, comment: comment.trim() || undefined });
-      haptics.success();
+      celebrate("Thanks for the review! ⭐");
     } catch (err) {
       haptics.error();
       Alert.alert("Couldn't submit rating", getErrorMessage(err));
@@ -271,6 +279,7 @@ function RatingSection({
 function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnType<typeof useMyBidOnTask>["data"] }) {
   const { profile } = useAuth();
   const placeBid = usePlaceBid();
+  const celebrate = useCelebrate();
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
 
@@ -297,7 +306,7 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
     }
     try {
       await placeBid.mutateAsync({ taskId, taskerId: profile.id, amount: parsedAmount, message });
-      haptics.success();
+      celebrate("Bid sent! 🚀");
     } catch (err) {
       haptics.error();
       Alert.alert("Couldn't place bid", getErrorMessage(err));
@@ -325,7 +334,9 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
 const styles = StyleSheet.create({
   content: { padding: spacing.lg },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: spacing.sm },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
+  categoryBadge: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  categoryEmoji: { fontSize: 26 },
   title: { ...typography.h1, fontSize: 24, color: colors.text, flex: 1 },
   budget: { ...typography.h2, fontSize: 20, color: colors.primary, marginTop: spacing.xs },
   meta: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },

@@ -70,7 +70,7 @@ export default function UserProfileScreen() {
         </View>
       }
       ListEmptyComponent={
-        <EmptyState icon="chatbox-ellipses-outline" title="No reviews yet" subtitle="Reviews appear after completed tasks." />
+        <EmptyState emoji="🌱" title="No reviews yet" subtitle="Reviews appear after completed tasks." />
       }
       renderItem={({ item }) => (
         <View style={styles.card}>

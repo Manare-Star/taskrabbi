@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../supabase";
+import { realtimeChannel, supabase } from "../supabase";
 import { uploadImageFromUri } from "../storage";
 import type { NearbyTask, Task } from "../types";
 
@@ -42,8 +42,7 @@ export function useTask(taskId: string | undefined) {
 
   useEffect(() => {
     if (!taskId) return;
-    const channel = supabase
-      .channel(`task:${taskId}`)
+    const channel = realtimeChannel(`task:${taskId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "tasks", filter: `id=eq.${taskId}` },

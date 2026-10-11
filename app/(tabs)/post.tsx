@@ -13,10 +13,12 @@ import { colors, radius, spacing, typography } from "../../lib/theme";
 import { TASK_CATEGORIES } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
+import { useCelebrate } from "../../lib/celebration";
 
 export default function PostTaskScreen() {
   const { profile } = useAuth();
   const createTask = useCreateTask();
+  const celebrate = useCelebrate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -94,7 +96,7 @@ export default function PostTaskScreen() {
       setAddressText("");
       setCoords(null);
       setImageUri(null);
-      haptics.success();
+      celebrate("Task posted! 🎉");
       router.push(`/task/${task.id}`);
     } catch (err) {
       haptics.error();

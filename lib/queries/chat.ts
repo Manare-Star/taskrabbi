@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../supabase";
+import { realtimeChannel, supabase } from "../supabase";
 import type { ChatMessage, ChatThread, Profile, Task } from "../types";
 
 const PARTICIPANTS_SELECT =
@@ -45,8 +45,7 @@ export function useMyThreads(userId: string | undefined) {
   // RLS scopes the realtime stream to threads this user can read.
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase
-      .channel(`inbox:${userId}`)
+    const channel = realtimeChannel(`inbox:${userId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () =>
         queryClient.invalidateQueries({ queryKey: ["my-threads", userId] })
       )
@@ -110,8 +109,7 @@ export function useThreadMessages(threadId: string | undefined) {
   useEffect(() => {
     if (!threadId) return;
 
-    const channel = supabase
-      .channel(`chat_messages:${threadId}`)
+    const channel = realtimeChannel(`chat_messages:${threadId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` },

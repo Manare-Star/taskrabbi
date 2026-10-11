@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../lib/auth-context";
+import { CelebrationProvider } from "../lib/celebration";
 import { colors } from "../lib/theme";
 
 const queryClient = new QueryClient();
@@ -27,15 +28,17 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <StripeProvider publishableKey={stripePublishableKey}>
           <AuthProvider>
-            <Stack screenOptions={{ headerTintColor: colors.primary, headerTitleStyle: { fontWeight: "700" } }}>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="task/[id]" options={{ title: "Task" }} />
-              <Stack.Screen name="chat/[threadId]" options={{ title: "Chat" }} />
-              <Stack.Screen name="user/[id]" options={{ title: "Profile" }} />
-              <Stack.Screen name="checkout/[taskId]" options={{ title: "Checkout", presentation: "modal" }} />
-            </Stack>
+            <CelebrationProvider>
+              <Stack screenOptions={{ headerTintColor: colors.primary, headerTitleStyle: { fontWeight: "700" } }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="task/[id]" options={{ title: "Task" }} />
+                <Stack.Screen name="chat/[threadId]" options={{ title: "Chat" }} />
+                <Stack.Screen name="user/[id]" options={{ title: "Profile" }} />
+                <Stack.Screen name="checkout/[taskId]" options={{ title: "Checkout", presentation: "modal" }} />
+              </Stack>
+            </CelebrationProvider>
           </AuthProvider>
         </StripeProvider>
       </QueryClientProvider>
