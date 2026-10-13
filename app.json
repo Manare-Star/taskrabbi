@@ -31,13 +31,6 @@
           "locationWhenInUsePermission": "We use your location to show tasks near you and let taskers find nearby jobs."
         }
       ],
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.example.taskrabbitclone",
-          "enableGooglePay": false
-        }
-      ],
       "expo-font",
       [
         "expo-image-picker",

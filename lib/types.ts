@@ -82,7 +82,8 @@ export interface ChatMessage {
 export interface Payment {
   id: string;
   task_id: string;
-  stripe_payment_intent_id: string;
+  // Paystack transaction reference (migration 0015; previously a Stripe PaymentIntent id).
+  reference: string;
   amount: number;
   status: PaymentStatus;
   created_at: string;

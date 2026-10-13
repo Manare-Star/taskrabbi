@@ -1,11 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "../supabase";
 import type { Payment } from "../types";
 
-interface PaymentIntentResponse {
-  clientSecret: string;
-  paymentIntentId: string;
+// supabase.functions.invoke reports any non-2xx as a generic "Edge Function returned a
+// non-2xx status code"; the function's own { error } message is in the response body.
+async function invokeFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T>(name, { body });
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const payload = await error.context.json().catch(() => null);
+      if (payload?.error) throw new Error(payload.error);
+    }
+    throw error;
+  }
+  if (!data) throw new Error(`No response from ${name}`);
+  return data;
+}
+
+export interface PaystackCheckout {
+  authorizationUrl: string;
+  reference: string;
   amount: number;
+  // Paystack redirects here when checkout ends; the app intercepts these, never loads them.
+  callbackUrl: string;
+  cancelUrl: string;
 }
 
 export function usePaymentForTask(taskId: string | undefined) {
@@ -20,31 +39,21 @@ export function usePaymentForTask(taskId: string | undefined) {
   });
 }
 
-// Calls the create-payment-intent Edge Function, which uses the Stripe secret key
-// (never present in the app) to create a PaymentIntent server-side.
-export function useCreatePaymentIntent() {
+// The paystack-initialize Edge Function holds the Paystack secret key (never in the app)
+// and returns a hosted checkout page for the accepted bid's amount.
+export function useStartPaystackCheckout() {
   return useMutation({
-    mutationFn: async (taskId: string): Promise<PaymentIntentResponse> => {
-      const { data, error } = await supabase.functions.invoke<PaymentIntentResponse>("create-payment-intent", {
-        body: { taskId },
-      });
-      if (error) throw error;
-      if (!data) throw new Error("No response from create-payment-intent");
-      return data;
-    },
+    mutationFn: (taskId: string) => invokeFunction<PaystackCheckout>("paystack-initialize", { taskId }),
   });
 }
 
-// Calls the confirm-payment Edge Function, which re-checks the PaymentIntent status with
-// Stripe directly (rather than trusting the client) before marking payment + task complete.
-export function useConfirmPayment() {
+// paystack-verify re-checks the transaction with Paystack directly (rather than trusting the
+// client) before marking the payment and task complete.
+export function useVerifyPaystackPayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { taskId: string; paymentIntentId: string }) => {
-      const { data, error } = await supabase.functions.invoke("confirm-payment", { body: input });
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (input: { taskId: string; reference: string }) =>
+      invokeFunction<{ status: string }>("paystack-verify", input),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["task", variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ["my-posted-tasks"] });

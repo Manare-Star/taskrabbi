@@ -1,15 +1,10 @@
-// Supabase Edge Function (Deno runtime). Deploy with:
-//   supabase functions deploy confirm-payment
-// Called by the app right after the Stripe Payment Sheet reports success. It re-checks
-// the PaymentIntent status directly with Stripe (never trusts the client's word alone)
-// before marking the payment + task as complete.
-import Stripe from "npm:stripe@16";
+// Supabase Edge Function (Deno runtime): confirms a Paystack payment and completes the task.
+//
+// Called by the app after Paystack's checkout redirects back. It re-checks the transaction
+// with Paystack directly (never trusting the client's word), including currency and the exact
+// amount, before marking the payment and task complete. Needs the same PAYSTACK_SECRET_KEY
+// secret as paystack-initialize.
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-06-20",
-  httpClient: Stripe.createFetchHttpClient(),
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +17,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const secretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+    if (!secretKey) {
+      return json({ error: "PAYSTACK_SECRET_KEY is not configured on the server" }, 500);
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return json({ error: "Missing Authorization header" }, 401);
@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid session" }, 401);
     }
 
-    const { taskId, paymentIntentId } = await req.json();
-    if (!taskId || !paymentIntentId) {
-      return json({ error: "taskId and paymentIntentId are required" }, 400);
+    const { taskId, reference } = await req.json();
+    if (!taskId || !reference) {
+      return json({ error: "taskId and reference are required" }, 400);
     }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .from("payments")
       .select("*, task:tasks(client_id)")
       .eq("task_id", taskId)
-      .eq("stripe_payment_intent_id", paymentIntentId)
+      .eq("reference", reference)
       .single();
     if (paymentError || !payment) {
       return json({ error: "Payment record not found" }, 404);
@@ -57,10 +57,28 @@ Deno.serve(async (req) => {
     if ((payment.task as { client_id: string }).client_id !== user.id) {
       return json({ error: "Only the task's client can confirm this payment" }, 403);
     }
+    if (payment.status === "succeeded") {
+      return json({ status: "completed" });
+    }
 
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (intent.status !== "succeeded") {
-      return json({ error: `Payment not completed yet (status: ${intent.status})` }, 400);
+    const paystackResponse = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secretKey}` } }
+    );
+    const paystack = await paystackResponse.json();
+    if (!paystackResponse.ok || !paystack.status) {
+      return json({ error: `Paystack: ${paystack.message ?? "could not verify payment"}` }, 502);
+    }
+
+    const transaction = paystack.data;
+    if (transaction.status !== "success") {
+      // abandoned / failed / ongoing — leave the task assigned so the client can try again.
+      return json({ error: `Payment not completed (status: ${transaction.status})` }, 400);
+    }
+    const expectedCents = Math.round(Number(payment.amount) * 100);
+    if (transaction.currency !== "ZAR" || Number(transaction.amount) !== expectedCents) {
+      await adminClient.from("payments").update({ status: "failed" }).eq("task_id", taskId);
+      return json({ error: "Paid amount or currency doesn't match this task" }, 400);
     }
 
     const { error: paymentUpdateError } = await adminClient

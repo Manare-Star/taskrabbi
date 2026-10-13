@@ -1,15 +1,15 @@
-// Supabase Edge Function (Deno runtime). Deploy with:
-//   supabase functions deploy create-payment-intent
-// Requires one secret that is NEVER put in the app or committed to git:
-//   supabase secrets set STRIPE_SECRET_KEY=sk_test_...
+// Supabase Edge Function (Deno runtime): starts a Paystack payment for an assigned task.
+//
+// Requires one secret, set under Edge Functions > Secrets in the Supabase dashboard and
+// NEVER put in the app or committed to git:
+//   PAYSTACK_SECRET_KEY = sk_test_...  (from Paystack dashboard > Settings > API Keys)
 // SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY are injected automatically.
-import Stripe from "npm:stripe@16";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2024-06-20",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+// Paystack sends the browser to these after checkout. They're never actually loaded:
+// the app's in-app browser intercepts navigation to them and closes itself.
+const CALLBACK_URL = "https://taskrabbit-clone.invalid/paystack/callback";
+const CANCEL_URL = "https://taskrabbit-clone.invalid/paystack/cancel";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +22,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const secretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+    if (!secretKey) {
+      return json({ error: "PAYSTACK_SECRET_KEY is not configured on the server" }, 500);
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return json({ error: "Missing Authorization header" }, 401);
@@ -37,6 +42,9 @@ Deno.serve(async (req) => {
     } = await callerClient.auth.getUser();
     if (userError || !user) {
       return json({ error: "Invalid session" }, 401);
+    }
+    if (!user.email) {
+      return json({ error: "Your account needs an email address to pay" }, 400);
     }
 
     const { taskId } = await req.json();
@@ -72,22 +80,29 @@ Deno.serve(async (req) => {
       return json({ error: "No accepted bid found for this task" }, 400);
     }
 
+    // Paystack amounts are in the currency's subunit: cents for ZAR.
     const amountCents = Math.round(Number(acceptedBid.amount) * 100);
+    const reference = `task-${taskId}-${crypto.randomUUID()}`;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: "zar",
-      automatic_payment_methods: { enabled: true },
-      metadata: { taskId, clientId: user.id },
+    const paystackResponse = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        amount: amountCents,
+        currency: "ZAR",
+        reference,
+        callback_url: CALLBACK_URL,
+        metadata: { task_id: taskId, client_id: user.id, cancel_action: CANCEL_URL },
+      }),
     });
+    const paystack = await paystackResponse.json();
+    if (!paystackResponse.ok || !paystack.status) {
+      return json({ error: `Paystack: ${paystack.message ?? "could not start payment"}` }, 502);
+    }
 
     const { error: upsertError } = await adminClient.from("payments").upsert(
-      {
-        task_id: taskId,
-        stripe_payment_intent_id: paymentIntent.id,
-        amount: acceptedBid.amount,
-        status: "pending",
-      },
+      { task_id: taskId, reference, amount: acceptedBid.amount, status: "pending" },
       { onConflict: "task_id" }
     );
     if (upsertError) {
@@ -95,9 +110,11 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
+      authorizationUrl: paystack.data.authorization_url,
+      reference,
       amount: acceptedBid.amount,
+      callbackUrl: CALLBACK_URL,
+      cancelUrl: CANCEL_URL,
     });
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

@@ -1,10 +1,11 @@
 # TaskRabbit Clone (MVP)
 
 A React Native (Expo) marketplace app: clients post tasks, taskers browse and bid, the two
-chat once a bid is accepted, and payment happens through Stripe when the task is done.
+chat once a bid is accepted, and payment happens through Paystack, in Rand, when the task
+is done.
 
 Stack: **Expo + TypeScript + Expo Router**, **Supabase** (Postgres/PostGIS, Auth, Realtime,
-Edge Functions), **Stripe** for payments.
+Edge Functions), **Paystack** for payments.
 
 ## 1. Install prerequisites
 
@@ -12,7 +13,7 @@ Edge Functions), **Stripe** for payments.
 - **Expo Go** app on your phone (iOS App Store / Google Play) — easiest way to run this
   without setting up Xcode/Android Studio
 - A free **Supabase** project — https://supabase.com
-- A free **Stripe** account in **test mode** — https://dashboard.stripe.com
+- A **Paystack** account (South Africa) in **test mode** — https://dashboard.paystack.com
 - The **Supabase CLI** (for running migrations and deploying the Edge Functions):
   `npm install -g supabase`
 
@@ -43,20 +44,27 @@ this Expo SDK expects — run it once after the initial install.
 3. In the Supabase dashboard under **Project Settings > API**, copy the **Project URL**
    and **anon public** key.
 
-## 4. Set up Stripe (test mode)
+## 4. Set up Paystack (test mode)
 
-1. In the Stripe dashboard, make sure you're in **Test mode** (toggle top-right).
-2. Copy your **Publishable key** (`pk_test_...`) and **Secret key** (`sk_test_...`) from
-   **Developers > API keys**.
-3. Give the secret key to Supabase as a function secret — never put it in the app:
+The app never holds a Paystack key. Two Edge Functions talk to Paystack: `paystack-initialize`
+starts a Rand (ZAR) transaction and returns Paystack's hosted checkout page, which the app
+opens in an in-app browser; `paystack-verify` re-checks the transaction with Paystack
+(status, currency and exact amount) before marking the task complete.
+
+1. In the Paystack dashboard, make sure you're in **Test mode**, then copy your **Test
+   Secret Key** (`sk_test_...`) from **Settings > API Keys & Webhooks**.
+2. Give it to Supabase as a function secret — never put it in the app:
    ```bash
-   supabase secrets set STRIPE_SECRET_KEY=sk_test_your_key
+   supabase secrets set PAYSTACK_SECRET_KEY=sk_test_your_key
    ```
-4. Deploy the two Edge Functions:
+   (or in the dashboard: **Edge Functions > Secrets**)
+3. Deploy the two Edge Functions:
    ```bash
-   supabase functions deploy create-payment-intent
-   supabase functions deploy confirm-payment
+   supabase functions deploy paystack-initialize
+   supabase functions deploy paystack-verify
    ```
+   (or in the dashboard: **Edge Functions > Deploy a new function > Via editor**, pasting
+   each `supabase/functions/<name>/index.ts`)
 
 ## 5. Configure environment variables
 
@@ -69,7 +77,6 @@ Fill in `.env`:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
-EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
 ```
 
 ## 6. Run the app
@@ -92,14 +99,14 @@ launch an iOS Simulator / Android emulator if you have one configured.
 5. Back on the client account, open the task from **My Tasks > Posted by me** and
    **accept the bid** — this opens a chat thread and moves the task to "assigned".
 6. Exchange a message or two in **Messages**.
-7. As the client, tap **Mark complete & pay** on the task, then **Pay now** — use the
-   Stripe test card `4242 4242 4242 4242`, any future expiry date, any CVC.
+7. As the client, tap **Mark complete & pay** on the task, then **Pay now**, and pay in
+   Paystack's checkout with one of the test cards it offers in test mode.
 8. Confirm the task now shows **Completed**.
 
 ## Notes
 
-- All payments in this app run against **Stripe test mode only**. No real charges are
-  ever created — `STRIPE_SECRET_KEY` should always be a `sk_test_...` key during
+- All payments in this app run against **Paystack test mode only**. No real charges are
+  ever created — `PAYSTACK_SECRET_KEY` should always be a `sk_test_...` key during
   development.
 - Row Level Security is enforced on every table — a tasker cannot read another tasker's
   bid amounts, and chat/payment rows are only visible to the two people involved. You can
@@ -116,6 +123,7 @@ launch an iOS Simulator / Android emulator if you have one configured.
   reach the backend (the project URL stops resolving), restore the project from the
   Supabase dashboard.
 - Not built yet (left for a follow-up iteration): push notifications for new bids/messages
-  (remote push no longer works in Expo Go, so this needs a development build), and a Stripe
-  webhook as a second, server-triggered path to confirm payments (currently confirmation
-  happens when the app calls the `confirm-payment` function right after checkout).
+  (remote push no longer works in Expo Go, so this needs a development build), and a
+  Paystack webhook (`charge.success`) as a second, server-triggered path to confirm payments
+  (currently confirmation happens when the app calls `paystack-verify` right after checkout,
+  so a payment completed while the app is closed is only picked up on the next attempt).
