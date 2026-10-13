@@ -13,6 +13,7 @@ import { CategoryFilterChips } from "../../components/CategoryFilterChips";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
 import { haptics } from "../../lib/haptics";
+import { formatMoney } from "../../lib/format";
 
 type ViewMode = "list" | "map";
 
@@ -105,7 +106,7 @@ export default function BrowseScreen() {
                       {task.title}
                     </Text>
                     <Text style={styles.calloutMeta}>
-                      ${task.budget.toFixed(0)} · {task.category}
+                      {formatMoney(task.budget)} · {task.category}
                     </Text>
                     <Text style={styles.calloutLink}>Tap to view</Text>
                   </View>

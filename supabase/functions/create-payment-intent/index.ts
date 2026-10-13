@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCents,
-      currency: "usd",
+      currency: "zar",
       automatic_payment_methods: { enabled: true },
       metadata: { taskId, clientId: user.id },
     });

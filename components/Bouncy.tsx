@@ -3,13 +3,24 @@ import { Animated, Pressable, type PressableProps, type StyleProp, type ViewStyl
 
 interface BouncyProps extends Omit<PressableProps, "style" | "children"> {
   style?: StyleProp<ViewStyle>;
+  // Layout for the outer touch target, e.g. { flex: 1 } so it can share a row.
+  containerStyle?: StyleProp<ViewStyle>;
   children: ReactNode;
   // How far it squishes on press; cards squish less than buttons.
   pressedScale?: number;
 }
 
 // A Pressable that springs down on touch and bounces back on release.
-export function Bouncy({ style, children, pressedScale = 0.96, onPressIn, onPressOut, disabled, ...rest }: BouncyProps) {
+export function Bouncy({
+  style,
+  containerStyle,
+  children,
+  pressedScale = 0.96,
+  onPressIn,
+  onPressOut,
+  disabled,
+  ...rest
+}: BouncyProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
   const springTo = (toValue: number) =>
@@ -18,6 +29,7 @@ export function Bouncy({ style, children, pressedScale = 0.96, onPressIn, onPres
   return (
     <Pressable
       {...rest}
+      style={containerStyle}
       disabled={disabled}
       onPressIn={(e) => {
         springTo(pressedScale);

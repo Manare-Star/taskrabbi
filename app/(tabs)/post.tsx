@@ -14,6 +14,8 @@ import { TASK_CATEGORIES } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
 import { useCelebrate } from "../../lib/celebration";
+import { SchedulePicker } from "../../components/SchedulePicker";
+import { FLEXIBLE, toScheduledFor, type ScheduleValue } from "../../lib/schedule";
 
 export default function PostTaskScreen() {
   const { profile } = useAuth();
@@ -28,6 +30,7 @@ export default function PostTaskScreen() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleValue>(FLEXIBLE);
 
   const onPickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,6 +91,7 @@ export default function PostTaskScreen() {
         lat: coords.lat,
         lng: coords.lng,
         imageUri: imageUri ?? undefined,
+        scheduledFor: toScheduledFor(schedule),
       });
       setTitle("");
       setDescription("");
@@ -96,6 +100,7 @@ export default function PostTaskScreen() {
       setAddressText("");
       setCoords(null);
       setImageUri(null);
+      setSchedule(FLEXIBLE);
       celebrate("Task posted! 🎉");
       router.push(`/task/${task.id}`);
     } catch (err) {
@@ -118,12 +123,17 @@ export default function PostTaskScreen() {
           style={styles.multiline}
         />
         <FormInput
-          label="Budget (USD)"
+          label="Budget (R)"
           value={budget}
           onChangeText={setBudget}
           keyboardType="decimal-pad"
-          placeholder="50"
+          placeholder="500"
         />
+
+        <Text style={styles.label}>When do you need it?</Text>
+        <View style={styles.chipsBleed}>
+          <SchedulePicker value={schedule} onChange={setSchedule} />
+        </View>
 
         <Text style={styles.label}>Photo (optional)</Text>
         <Pressable style={styles.photoPicker} onPress={onPickPhoto}>

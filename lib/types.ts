@@ -36,6 +36,8 @@ export interface Task {
   status: TaskStatus;
   address_text: string;
   image_url: string | null;
+  // When the client needs it done (migration 0014); null/absent means flexible timing.
+  scheduled_for?: string | null;
   created_at: string;
   updated_at: string;
 }

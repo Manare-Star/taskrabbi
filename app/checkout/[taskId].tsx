@@ -9,6 +9,7 @@ import { Button } from "../../components/Button";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
 import { getErrorMessage } from "../../lib/errors";
 import { useCelebrate } from "../../lib/celebration";
+import { formatMoney } from "../../lib/format";
 
 export default function CheckoutScreen() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
@@ -75,7 +76,7 @@ export default function CheckoutScreen() {
         <Text style={styles.title} numberOfLines={2}>
           {task?.title ?? "Checkout"}
         </Text>
-        {amount !== null && <Text style={styles.amount}>${amount.toFixed(2)}</Text>}
+        {amount !== null && <Text style={styles.amount}>{formatMoney(amount, { cents: true })}</Text>}
       </View>
 
       <View style={styles.hintRow}>

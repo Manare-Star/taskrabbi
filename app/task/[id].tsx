@@ -20,6 +20,8 @@ import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
 import { useCelebrate } from "../../lib/celebration";
 import { categoryStyle } from "../../lib/categories";
+import { formatMoney } from "../../lib/format";
+import { describeSchedule } from "../../lib/schedule";
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,10 +116,13 @@ export default function TaskDetailScreen() {
           <Text style={[styles.statusPillText, { color: status.fg }]}>{task.status}</Text>
         </View>
       </View>
-      <Text style={styles.budget}>${task.budget.toFixed(0)}</Text>
+      <Text style={styles.budget}>{formatMoney(task.budget)}</Text>
       <Text style={styles.meta}>
         {task.category} · {task.address_text}
       </Text>
+      <View style={styles.whenPill}>
+        <Text style={styles.whenText}>🗓 {describeSchedule(task.scheduled_for)}</Text>
+      </View>
       {task.image_url && <Image source={{ uri: task.image_url }} style={styles.image} />}
       <Text style={styles.description}>{task.description}</Text>
 
@@ -169,7 +174,7 @@ export default function TaskDetailScreen() {
                       <Text style={styles.bidderName}>{bid.tasker.full_name}</Text>
                       <StarRating rating={bid.tasker.rating_avg} count={bid.tasker.rating_count} />
                     </View>
-                    <Text style={styles.bidAmount}>${bid.amount.toFixed(0)}</Text>
+                    <Text style={styles.bidAmount}>{formatMoney(bid.amount)}</Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
                   </Pressable>
                   {bid.message ? <Text style={styles.bidMessage}>{bid.message}</Text> : null}
@@ -289,7 +294,7 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Your bid</Text>
         <View style={styles.bidCard}>
-          <Text style={styles.bidAmount}>${existingBid.amount.toFixed(0)}</Text>
+          <Text style={styles.bidAmount}>{formatMoney(existingBid.amount)}</Text>
           <View style={[styles.statusPill, { backgroundColor: bidStatus.bg, alignSelf: "flex-start" }]}>
             <Text style={[styles.statusPillText, { color: bidStatus.fg }]}>{existingBid.status}</Text>
           </View>
@@ -316,7 +321,7 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Place a bid</Text>
-      <FormInput label="Your price (USD)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="45" />
+      <FormInput label="Your price (R)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="450" />
       <FormInput
         label="Message (optional)"
         value={message}
@@ -337,6 +342,15 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   categoryBadge: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   categoryEmoji: { fontSize: 26 },
+  whenPill: {
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: radius.lg,
+  },
+  whenText: { fontSize: 13, fontWeight: "700", color: colors.primaryDark },
   title: { ...typography.h1, fontSize: 24, color: colors.text, flex: 1 },
   budget: { ...typography.h2, fontSize: 20, color: colors.primary, marginTop: spacing.xs },
   meta: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },

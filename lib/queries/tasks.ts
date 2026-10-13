@@ -83,6 +83,7 @@ interface NewTaskInput {
   lat: number;
   lng: number;
   imageUri?: string;
+  scheduledFor?: string;
 }
 
 export function useCreateTask() {
@@ -100,6 +101,9 @@ export function useCreateTask() {
           address_text: input.addressText,
           // PostGIS geography(Point) accepts WKT via the PostgREST text cast
           location: `SRID=4326;POINT(${input.lng} ${input.lat})`,
+          // Only sent when a date was picked, so "Flexible" tasks still post on a database
+          // that hasn't had migration 0014 applied yet.
+          ...(input.scheduledFor ? { scheduled_for: input.scheduledFor } : {}),
         })
         .select()
         .single();
