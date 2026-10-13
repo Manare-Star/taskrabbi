@@ -2,10 +2,15 @@ import { ActivityIndicator, View } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth-context";
+import { totalUnread, useUnreadCounts } from "../../lib/queries/chat";
+import { ActivityBell } from "../../components/ActivityBell";
 import { colors } from "../../lib/theme";
 
 export default function TabsLayout() {
   const { session, profile, loading } = useAuth();
+  // Mounted for as long as you're signed in, so the Messages badge stays live on every tab.
+  const { data: unreadByThread } = useUnreadCounts(profile?.id);
+  const unreadMessages = totalUnread(unreadByThread);
 
   if (loading) {
     return (
@@ -32,6 +37,8 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: "700", color: colors.text },
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: true,
+        headerRight: () => <ActivityBell />,
+        tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10, fontWeight: "800" },
       }}
     >
       <Tabs.Screen
@@ -65,6 +72,7 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
+          tabBarBadge: unreadMessages > 0 ? (unreadMessages > 99 ? "99+" : unreadMessages) : undefined,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} color={color} size={size} />
           ),

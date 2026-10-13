@@ -89,6 +89,21 @@ export interface Payment {
   created_at: string;
 }
 
+export type NotificationKind = "new_bid" | "bid_accepted" | "bid_rejected" | "task_paid" | "new_review";
+
+// Activity feed entry, written by database triggers (migration 0016).
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string | null;
+  task_id: string | null;
+  actor_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
 export interface Rating {
   id: string;
   task_id: string;

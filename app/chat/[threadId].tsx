@@ -13,7 +13,7 @@ import { ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
-import { useSendMessage, useThread, useThreadMessages } from "../../lib/queries/chat";
+import { useMarkThreadRead, useSendMessage, useThread, useThreadMessages } from "../../lib/queries/chat";
 import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
@@ -67,8 +67,17 @@ export default function ChatThreadScreen() {
   const { data: thread } = useThread(threadId);
   const { data: messages, isLoading } = useThreadMessages(threadId);
   const sendMessage = useSendMessage();
+  const markRead = useMarkThreadRead();
   const [body, setBody] = useState("");
   const listRef = useRef<FlatList<ListItem>>(null);
+
+  // Being on this screen means you've seen everything in it: mark read on open and again
+  // whenever a new message arrives. Failures are harmless (the badge just lingers).
+  const messageCount = messages?.length ?? 0;
+  useEffect(() => {
+    if (threadId) markRead.mutate(threadId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, messageCount]);
 
   const otherParticipant =
     thread && profile

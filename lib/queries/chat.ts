@@ -158,3 +158,52 @@ export function useSendMessage() {
     },
   });
 }
+
+// Unread message count per thread ({ [threadId]: count }, only threads with unread). Live:
+// any new message in my threads (realtime is RLS-scoped to them) triggers a recount.
+export function useUnreadCounts(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["unread-counts", userId],
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await supabase.rpc("my_unread_counts");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const row of (data ?? []) as { thread_id: string; unread: number }[]) {
+        counts[row.thread_id] = Number(row.unread);
+      }
+      return counts;
+    },
+    enabled: !!userId,
+  });
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = realtimeChannel(`unread:${userId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["unread-counts", userId] })
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+
+  return query;
+}
+
+export function totalUnread(counts: Record<string, number> | undefined): number {
+  return Object.values(counts ?? {}).reduce((sum, n) => sum + n, 0);
+}
+
+export function useMarkThreadRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (threadId: string) => {
+      const { error } = await supabase.rpc("mark_thread_read", { p_thread_id: threadId });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["unread-counts"] }),
+  });
+}

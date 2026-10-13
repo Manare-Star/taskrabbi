@@ -1,7 +1,7 @@
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
-import { useMyThreads, type InboxThread } from "../../lib/queries/chat";
+import { useMyThreads, useUnreadCounts, type InboxThread } from "../../lib/queries/chat";
 import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
@@ -22,6 +22,7 @@ function shortTimestamp(iso: string): string {
 export default function MessagesScreen() {
   const { profile } = useAuth();
   const { data: threads, isLoading, isRefetching, refetch } = useMyThreads(profile?.id);
+  const { data: unreadByThread } = useUnreadCounts(profile?.id);
 
   if (isLoading) {
     return (
@@ -52,10 +53,11 @@ export default function MessagesScreen() {
         const preview = last
           ? `${last.sender_id === profile?.id ? "You: " : ""}${last.body}`
           : "No messages yet — say hi";
+        const unread = unreadByThread?.[item.id] ?? 0;
 
         return (
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            style={({ pressed }) => [styles.row, unread > 0 && styles.rowUnread, pressed && styles.rowPressed]}
             onPress={() => router.push(`/chat/${item.id}`)}
           >
             <Avatar name={other.full_name} url={other.avatar_url} size={48} />
@@ -64,7 +66,9 @@ export default function MessagesScreen() {
                 <Text style={styles.name} numberOfLines={1}>
                   {other.full_name}
                 </Text>
-                <Text style={styles.time}>{shortTimestamp(last?.created_at ?? item.created_at)}</Text>
+                <Text style={[styles.time, unread > 0 && styles.timeUnread]}>
+                  {shortTimestamp(last?.created_at ?? item.created_at)}
+                </Text>
               </View>
               <View style={styles.taskLine}>
                 <Text style={styles.taskTitle} numberOfLines={1}>
@@ -74,9 +78,19 @@ export default function MessagesScreen() {
                   <Text style={[styles.statusText, { color: status.fg }]}>{completed ? "Completed" : "Active"}</Text>
                 </View>
               </View>
-              <Text style={[styles.preview, !last && styles.previewEmpty]} numberOfLines={1}>
-                {preview}
-              </Text>
+              <View style={styles.previewLine}>
+                <Text
+                  style={[styles.preview, !last && styles.previewEmpty, unread > 0 && styles.previewUnread]}
+                  numberOfLines={1}
+                >
+                  {preview}
+                </Text>
+                {unread > 0 && (
+                  <View style={styles.unreadBubble}>
+                    <Text style={styles.unreadText}>{unread > 99 ? "99+" : unread}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </Pressable>
         );
@@ -98,6 +112,20 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   rowPressed: { opacity: 0.9 },
+  rowUnread: { borderLeftWidth: 4, borderLeftColor: colors.primary },
+  timeUnread: { color: colors.primary, fontWeight: "700" },
+  previewLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  previewUnread: { fontWeight: "700" },
+  unreadBubble: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
   rowText: { flex: 1, gap: 3 },
   topLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   name: { ...typography.bodyStrong, color: colors.text, flex: 1 },
@@ -106,6 +134,6 @@ const styles = StyleSheet.create({
   taskTitle: { fontSize: 13, color: colors.textMuted, flexShrink: 1 },
   statusPill: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.sm },
   statusText: { fontSize: 10, fontWeight: "700" },
-  preview: { fontSize: 14, color: colors.text },
+  preview: { fontSize: 14, color: colors.text, flex: 1 },
   previewEmpty: { color: colors.textFaint, fontStyle: "italic" },
 });
