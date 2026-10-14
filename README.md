@@ -119,6 +119,15 @@ launch an iOS Simulator / Android emulator if you have one configured.
 - The Browse map uses `react-native-maps`, which works in Expo Go as-is. A standalone
   Android build (EAS / dev client) additionally needs a Google Maps API key configured via
   the `react-native-maps` config plugin.
+- Supabase's Security Advisor flags two things that come from PostGIS being installed in
+  the `public` schema: "Extension in Public" and "RLS Disabled" on `spatial_ref_sys`
+  (PostGIS's coordinate-system catalogue, no user data). Migration 0017 locks the table down
+  where Supabase permits it. Fully fixing both means moving PostGIS to the `extensions`
+  schema, which on Supabase requires dropping and recreating the extension, and that would
+  delete `tasks.location`. Only worth doing before there's real data.
+- The RPCs the app calls (`accept_bid`, `submit_rating`, `mark_thread_read`, ...) are
+  SECURITY DEFINER and callable by signed-in users on purpose; each checks `auth.uid()`
+  itself. The advisor may list them as warnings.
 - Supabase free-tier projects pause after a week of inactivity. If the app suddenly can't
   reach the backend (the project URL stops resolving), restore the project from the
   Supabase dashboard.
