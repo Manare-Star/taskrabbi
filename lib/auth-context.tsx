@@ -26,20 +26,44 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setProfile(data);
   };
 
+  // Used on app start and sign-in, where nothing awaits the result. A token refreshed a moment
+  // ago can be briefly rejected ("JWT issued at future") while Supabase's servers agree on the
+  // time, so retry once before giving up, and never leave the rejection unhandled.
+  const loadProfileSafely = async (userId: string) => {
+    try {
+      await loadProfile(userId);
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        await loadProfile(userId);
+      } catch (err) {
+        console.warn("Couldn't load profile:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!isMounted) return;
-      setSession(data.session);
-      if (data.session) await loadProfile(data.session.user.id);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!isMounted) return;
+        setSession(data.session);
+        if (data.session) await loadProfileSafely(data.session.user.id);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession) {
-        await loadProfile(newSession.user.id);
+        // Supabase docs: don't await Supabase calls inside this callback (it can stall the
+        // auth client's token refresh); run them right after it returns instead.
+        setTimeout(() => {
+          if (isMounted) void loadProfileSafely(newSession.user.id);
+        }, 0);
       } else {
         setProfile(null);
       }
