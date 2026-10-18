@@ -69,6 +69,17 @@ opens in an in-app browser; `paystack-verify` re-checks the transaction with Pay
    the bottom; change it to exactly `paystack-initialize` / `paystack-verify`, and make sure
    each gets its own file (initialize starts "...starts a Paystack payment", verify starts
    "...confirms a Paystack payment").
+4. Deploy the webhook, which confirms payments server-side even if the app never returns from
+   checkout (phone died, app closed). Paystack sends no Supabase login token, so JWT
+   verification must be **off** for this one function; it checks Paystack's
+   `x-paystack-signature` instead and rejects anything unsigned:
+   ```bash
+   supabase functions deploy paystack-webhook --no-verify-jwt
+   ```
+   (or in the dashboard: deploy `supabase/functions/paystack-webhook/index.ts` as
+   `paystack-webhook`, then turn **Enforce JWT verification** off in its settings)
+5. In Paystack, under **Settings > API Keys & Webhooks**, set the **Test Webhook URL** to
+   `https://YOUR-PROJECT-REF.supabase.co/functions/v1/paystack-webhook`.
 
 ## 5. Configure environment variables
 
@@ -133,8 +144,10 @@ launch an iOS Simulator / Android emulator if you have one configured.
 - Supabase free-tier projects pause after a week of inactivity. If the app suddenly can't
   reach the backend (the project URL stops resolving), restore the project from the
   Supabase dashboard.
+- Payments are confirmed two ways, whichever happens first: the app calls `paystack-verify`
+  when checkout redirects back, and Paystack calls `paystack-webhook` on `charge.success`.
+  Both re-check the transaction with Paystack (status, ZAR, exact amount), and completing a
+  task twice is harmless, so the tasker is notified once.
 - Not built yet (left for a follow-up iteration): push notifications for new bids/messages
-  (remote push no longer works in Expo Go, so this needs a development build), and a
-  Paystack webhook (`charge.success`) as a second, server-triggered path to confirm payments
-  (currently confirmation happens when the app calls `paystack-verify` right after checkout,
-  so a payment completed while the app is closed is only picked up on the next attempt).
+  (remote push no longer works in Expo Go, so this needs a development build), and payouts
+  to taskers (clients' payments currently land in the platform's Paystack balance).
