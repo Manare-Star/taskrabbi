@@ -57,14 +57,18 @@ opens in an in-app browser; `paystack-verify` re-checks the transaction with Pay
    ```bash
    supabase secrets set PAYSTACK_SECRET_KEY=sk_test_your_key
    ```
-   (or in the dashboard: **Edge Functions > Secrets**)
+   (or in the dashboard: **Edge Functions > Secrets**). The name is case-sensitive: it must be
+   exactly `PAYSTACK_SECRET_KEY`.
 3. Deploy the two Edge Functions:
    ```bash
    supabase functions deploy paystack-initialize
    supabase functions deploy paystack-verify
    ```
    (or in the dashboard: **Edge Functions > Deploy a new function > Via editor**, pasting
-   each `supabase/functions/<name>/index.ts`)
+   each `supabase/functions/<name>/index.ts`). The editor suggests a random function name at
+   the bottom; change it to exactly `paystack-initialize` / `paystack-verify`, and make sure
+   each gets its own file (initialize starts "...starts a Paystack payment", verify starts
+   "...confirms a Paystack payment").
 
 ## 5. Configure environment variables
 
