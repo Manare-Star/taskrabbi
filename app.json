@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "TaskRabbit Clone",
-    "slug": "taskrabbit-clone",
-    "scheme": "taskrabbitclone",
+    "name": "Siza",
+    "slug": "siza",
+    "scheme": "siza",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,13 +11,13 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.taskrabbitclone",
+      "bundleIdentifier": "za.co.siza.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show tasks near you and let taskers find nearby jobs."
       }
     },
     "android": {
-      "package": "com.example.taskrabbitclone",
+      "package": "za.co.siza.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"

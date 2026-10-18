@@ -1,8 +1,8 @@
-# TaskRabbit Clone (MVP)
+# Siza (MVP)
 
-A React Native (Expo) marketplace app: clients post tasks, taskers browse and bid, the two
-chat once a bid is accepted, and payment happens through Paystack, in Rand, when the task
-is done.
+Siza (isiZulu/isiXhosa for "help") is a React Native (Expo) marketplace app for South
+Africa: clients post tasks, taskers browse and bid, the two chat once a bid is accepted, and
+payment happens through Paystack, in Rand, when the task is done.
 
 Stack: **Expo + TypeScript + Expo Router**, **Supabase** (Postgres/PostGIS, Auth, Realtime,
 Edge Functions), **Paystack** for payments.

@@ -32,8 +32,11 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.brandMark}>
-          <Ionicons name="hammer" size={28} color={colors.white} />
+        <View style={styles.brandRow}>
+          <View style={styles.brandMark}>
+            <Ionicons name="hammer" size={28} color={colors.white} />
+          </View>
+          <Text style={styles.wordmark}>Siza</Text>
         </View>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Log in to post or find tasks nearby.</Text>
@@ -72,6 +75,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, justifyContent: "center", padding: spacing.lg },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
   brandMark: {
     width: 56,
     height: 56,
@@ -79,8 +83,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.lg,
   },
+  wordmark: { fontSize: 34, fontWeight: "800", color: colors.primary, letterSpacing: -0.5 },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: spacing.lg, gap: spacing.xs },
