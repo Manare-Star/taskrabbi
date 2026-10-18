@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, type PressableProps } from "react-native";
-import { colors, radius, shadow, spacing, typography } from "../lib/theme";
+import { colors, radius, spacing, typography } from "../lib/theme";
 import { Bouncy } from "./Bouncy";
 
 interface ButtonProps extends Omit<PressableProps, "style" | "children"> {
@@ -24,7 +24,7 @@ export function Button({ title, loading, variant = "primary", disabled, ...rest 
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "secondary" ? colors.primary : colors.white} />
+        <ActivityIndicator color={variant === "secondary" ? colors.text : colors.white} />
       ) : (
         <Text style={[styles.text, variant === "secondary" && styles.textSecondary]}>{title}</Text>
       )}
@@ -34,17 +34,17 @@ export function Button({ title, loading, variant = "primary", disabled, ...rest 
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: spacing.md - 2,
+    paddingVertical: spacing.sm + 6,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 52,
+    minHeight: 50,
   },
-  primary: { backgroundColor: colors.primary, ...shadow.button },
-  secondary: { backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.border },
+  primary: { backgroundColor: colors.primary },
+  secondary: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.borderStrong },
   danger: { backgroundColor: colors.danger },
-  disabled: { opacity: 0.45, shadowOpacity: 0, elevation: 0 },
-  text: { ...typography.bodyStrong, fontSize: 16, color: colors.white, letterSpacing: 0.2 },
+  disabled: { opacity: 0.45 },
+  text: { ...typography.bodyStrong, fontSize: 16, color: colors.white },
   textSecondary: { color: colors.text },
 });

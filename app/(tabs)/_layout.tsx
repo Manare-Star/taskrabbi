@@ -27,44 +27,46 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
         tabBarStyle: {
-          borderTopColor: colors.border,
+          borderTopColor: colors.borderStrong,
           height: 60,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        headerTitleStyle: { fontWeight: "700", color: colors.text },
+        headerTitleStyle: { fontWeight: "600", fontSize: 17, color: colors.text },
         headerStyle: { backgroundColor: colors.background },
-        headerShadowVisible: true,
+        headerShadowVisible: false,
         headerRight: () => <ActivityBell />,
-        tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10, fontWeight: "800" },
+        tabBarBadgeStyle: { backgroundColor: colors.primary, fontSize: 10, fontWeight: "700" },
       }}
     >
       <Tabs.Screen
         name="browse"
         options={{
           title: "Browse",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "search" : "search-outline"} color={color} size={size} />
+          // The screen draws its own large "Tasks near you" title.
+          headerTitle: "",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="search-outline" color={color} size={size - 1} />
           ),
         }}
       />
       <Tabs.Screen
         name="post"
         options={{
-          title: "Post a Task",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "add-circle" : "add-circle-outline"} color={color} size={size} />
+          title: "Post a task",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle-outline" color={color} size={size} />
           ),
         }}
       />
       <Tabs.Screen
         name="my-tasks"
         options={{
-          title: "My Tasks",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "list" : "list-outline"} color={color} size={size} />
+          title: "My tasks",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="reader-outline" color={color} size={size - 1} />
           ),
         }}
       />
@@ -73,8 +75,8 @@ export default function TabsLayout() {
         options={{
           title: "Messages",
           tabBarBadge: unreadMessages > 0 ? (unreadMessages > 99 ? "99+" : unreadMessages) : undefined,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" color={color} size={size - 1} />
           ),
         }}
       />
@@ -82,8 +84,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "person-circle" : "person-circle-outline"} color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color} size={size - 1} />
           ),
         }}
       />

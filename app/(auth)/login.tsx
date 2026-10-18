@@ -34,12 +34,12 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.brandRow}>
           <View style={styles.brandMark}>
-            <Ionicons name="hammer" size={28} color={colors.white} />
+            <Ionicons name="hand-left-outline" size={18} color={colors.white} />
           </View>
-          <Text style={styles.wordmark}>Siza</Text>
+          <Text style={styles.wordmark}>siza</Text>
         </View>
         <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Log in to post or find tasks nearby.</Text>
+        <Text style={styles.subtitle}>Log in to post a task or find work nearby.</Text>
 
         <FormInput
           label="Email"
@@ -75,19 +75,19 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, justifyContent: "center", padding: spacing.lg },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm + 2, marginBottom: spacing.xl },
   brandMark: {
-    width: 56,
-    height: 56,
+    width: 34,
+    height: 34,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  wordmark: { fontSize: 34, fontWeight: "800", color: colors.primary, letterSpacing: -0.5 },
+  wordmark: { fontSize: 26, fontWeight: "600", color: colors.text, letterSpacing: -0.6 },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: spacing.lg, gap: spacing.xs },
   footerText: { color: colors.textMuted },
-  link: { color: colors.primary, fontWeight: "600" },
+  link: { color: colors.primary, fontWeight: "500" },
 });

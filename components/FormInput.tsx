@@ -33,11 +33,11 @@ export function FormInput({ label, error, style, onFocus, onBlur, ...rest }: For
 
 const styles = StyleSheet.create({
   container: { marginBottom: spacing.md },
-  label: { ...typography.label, color: colors.text, marginBottom: spacing.xs },
+  label: { ...typography.label, fontWeight: "500", color: colors.text, marginBottom: 6 },
   input: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: 16,

@@ -11,7 +11,7 @@ interface StarRatingProps {
 export function StarRating({ rating, count, size = 14 }: StarRatingProps) {
   return (
     <View style={styles.row}>
-      <Ionicons name="star" size={size} color="#F5A623" />
+      <Ionicons name="star" size={size} color={colors.accent} />
       <Text style={styles.text}>
         {rating > 0 ? rating.toFixed(1) : "New"} {count > 0 ? `(${count})` : ""}
       </Text>

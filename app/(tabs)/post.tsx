@@ -101,7 +101,7 @@ export default function PostTaskScreen() {
       setCoords(null);
       setImageUri(null);
       setSchedule(FLEXIBLE);
-      celebrate("Task posted! 🎉");
+      celebrate("Task posted");
       router.push(`/task/${task.id}`);
     } catch (err) {
       haptics.error();
@@ -117,7 +117,7 @@ export default function PostTaskScreen() {
           label="Description"
           value={description}
           onChangeText={setDescription}
-          placeholder="Describe what you need done..."
+          placeholder="What needs doing, and anything a tasker should know"
           multiline
           numberOfLines={4}
           style={styles.multiline}
@@ -149,7 +149,7 @@ export default function PostTaskScreen() {
 
         <Text style={styles.label}>Category</Text>
         <View style={styles.chipsBleed}>
-          <CategoryFilterChips categories={TASK_CATEGORIES} selected={category} onSelect={setCategory} />
+          <CategoryFilterChips categories={TASK_CATEGORIES} selected={category} onSelect={setCategory} showAll={false} />
         </View>
 
         <View style={styles.locationSection}>
@@ -157,19 +157,18 @@ export default function PostTaskScreen() {
             label="Location"
             value={addressText}
             onChangeText={setAddressText}
-            placeholder="Tap 'Use my location' or type an address"
+            placeholder="Street address or suburb"
           />
           <Button title="Use my location" variant="secondary" onPress={useCurrentLocation} loading={locating} />
           {coords && (
-            <View style={styles.coordsPill}>
-              <Text style={styles.coordsText}>
-                Pinned at {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-              </Text>
+            <View style={styles.coordsRow}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+              <Text style={styles.coordsText}>Location pinned on the map</Text>
             </View>
           )}
         </View>
 
-        <Button title="Post Task" onPress={onSubmit} loading={createTask.isPending} />
+        <Button title="Post task" onPress={onSubmit} loading={createTask.isPending} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -177,17 +176,17 @@ export default function PostTaskScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg },
-  label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
+  content: { padding: spacing.md, paddingBottom: spacing.xl },
+  label: { ...typography.label, fontWeight: "500", color: colors.text, marginBottom: 6 },
   multiline: { minHeight: 100, textAlignVertical: "top" },
-  chipsBleed: { marginHorizontal: -spacing.lg, marginBottom: spacing.sm },
+  chipsBleed: { marginHorizontal: -spacing.md, marginBottom: spacing.md },
   photoPicker: { marginBottom: spacing.lg },
   photoPreview: { width: "100%", height: 160, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   photoPlaceholder: {
     height: 100,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
@@ -196,12 +195,6 @@ const styles = StyleSheet.create({
   },
   photoPlaceholderText: { ...typography.caption, color: colors.textMuted },
   locationSection: { marginTop: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm },
-  coordsPill: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  coordsText: { fontSize: 12, color: colors.primaryDark, fontWeight: "600" },
+  coordsRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  coordsText: { fontSize: 13, color: colors.primaryDark },
 });

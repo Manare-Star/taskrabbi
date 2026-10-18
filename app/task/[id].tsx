@@ -14,12 +14,12 @@ import { StarRating } from "../../components/StarRating";
 import { StarRatingInput } from "../../components/StarRatingInput";
 import { EmptyState } from "../../components/EmptyState";
 import { Avatar } from "../../components/Avatar";
-import { colors, radius, shadow, spacing, statusColors, typography } from "../../lib/theme";
+import { colors, radius, spacing, statusColors, typography } from "../../lib/theme";
 import type { BidWithTasker } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
 import { useCelebrate } from "../../lib/celebration";
-import { categoryStyle } from "../../lib/categories";
+import { categoryIcon } from "../../lib/categories";
 import { formatMoney } from "../../lib/format";
 import { describeSchedule } from "../../lib/schedule";
 
@@ -52,8 +52,8 @@ export default function TaskDetailScreen() {
     const prev = previousBidStatus.current;
     if (prev && prev !== myBid.status) {
       if (myBid.status === "accepted") {
-        celebrate("Your bid won! 🏆");
-        Alert.alert("Bid accepted! 🎉", "The client accepted your bid. Open the chat to coordinate details.", [
+        celebrate("Your bid was accepted");
+        Alert.alert("Bid accepted", "The client accepted your bid. Open the chat to coordinate details.", [
           { text: "Later", style: "cancel" },
           { text: "Open chat", onPress: () => thread && router.push(`/chat/${thread.id}`) },
         ]);
@@ -75,7 +75,7 @@ export default function TaskDetailScreen() {
   const onAccept = async (bidId: string) => {
     try {
       const newThread = await acceptBid.mutateAsync(bidId);
-      celebrate("You hired a tasker! 🤝");
+      celebrate("Tasker hired");
       router.push(`/chat/${newThread.id}`);
     } catch (err) {
       haptics.error();
@@ -107,23 +107,20 @@ export default function TaskDetailScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.headerRow}>
-        <View style={[styles.categoryBadge, { backgroundColor: categoryStyle(task.category).tint }]}>
-          <Text style={styles.categoryEmoji}>{categoryStyle(task.category).emoji}</Text>
-        </View>
-        <Text style={styles.title}>{task.title}</Text>
-        <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-          <Text style={[styles.statusPillText, { color: status.fg }]}>{task.status}</Text>
-        </View>
+      <View style={[styles.statusPill, { backgroundColor: status.bg, alignSelf: "flex-start" }]}>
+        <Text style={[styles.statusPillText, { color: status.fg }]}>{task.status}</Text>
       </View>
+      <Text style={styles.title}>{task.title}</Text>
       <Text style={styles.budget}>{formatMoney(task.budget)}</Text>
-      <Text style={styles.meta}>
-        {task.category} · {task.address_text}
-      </Text>
-      <View style={styles.whenPill}>
-        <Text style={styles.whenText}>🗓 {describeSchedule(task.scheduled_for)}</Text>
+
+      <View style={styles.facts}>
+        <Fact icon={categoryIcon(task.category)} text={task.category} />
+        <Fact icon="location-outline" text={task.address_text} />
+        <Fact icon="calendar-outline" text={describeSchedule(task.scheduled_for)} />
       </View>
+
       {task.image_url && <Image source={{ uri: task.image_url }} style={styles.image} />}
+      <Text style={styles.sectionLabel}>Details</Text>
       <Text style={styles.description}>{task.description}</Text>
 
       {!isOwner && clientProfile && (
@@ -149,7 +146,11 @@ export default function TaskDetailScreen() {
 
       {task.status === "assigned" && isOwner && (
         <View style={styles.actionSpacer}>
-          <Button title="Mark complete & pay" onPress={() => router.push(`/checkout/${task.id}`)} />
+          <Button title="Mark complete and pay" onPress={() => router.push(`/checkout/${task.id}`)} />
+          <View style={styles.secureNote}>
+            <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.secureNoteText}>Paid securely through Paystack</Text>
+          </View>
         </View>
       )}
 
@@ -159,7 +160,7 @@ export default function TaskDetailScreen() {
           {bidsLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : !bids?.length ? (
-            <EmptyState emoji="⏳" title="No bids yet" subtitle="Hang tight — offers from taskers will pop up here." />
+            <EmptyState icon="time-outline" title="No bids yet" subtitle="Offers from taskers appear here as they come in." />
           ) : (
             bids.map((bid: BidWithTasker) => {
               const bidStatus = statusColors[bid.status];
@@ -218,6 +219,15 @@ export default function TaskDetailScreen() {
   );
 }
 
+function Fact({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return (
+    <View style={styles.fact}>
+      <Ionicons name={icon} size={17} color={colors.textMuted} />
+      <Text style={styles.factText}>{text}</Text>
+    </View>
+  );
+}
+
 function RatingSection({
   taskId,
   currentUserId,
@@ -254,7 +264,7 @@ function RatingSection({
     }
     try {
       await submitRating.mutateAsync({ taskId, rateeId: ratee.id, stars, comment: comment.trim() || undefined });
-      celebrate("Thanks for the review! ⭐");
+      celebrate("Review submitted");
     } catch (err) {
       haptics.error();
       Alert.alert("Couldn't submit rating", getErrorMessage(err));
@@ -311,7 +321,7 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
     }
     try {
       await placeBid.mutateAsync({ taskId, taskerId: profile.id, amount: parsedAmount, message });
-      celebrate("Bid sent! 🚀");
+      celebrate("Bid sent");
     } catch (err) {
       haptics.error();
       Alert.alert("Couldn't place bid", getErrorMessage(err));
@@ -326,7 +336,7 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
         label="Message (optional)"
         value={message}
         onChangeText={setMessage}
-        placeholder="Introduce yourself, share availability..."
+        placeholder="Introduce yourself and say when you can do it"
         multiline
         numberOfLines={3}
         style={styles.multiline}
@@ -337,53 +347,55 @@ function BidForm({ taskId, existingBid }: { taskId: string; existingBid: ReturnT
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg },
+  content: { padding: spacing.md, paddingBottom: spacing.xxl },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
-  categoryBadge: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  categoryEmoji: { fontSize: 26 },
-  whenPill: {
-    alignSelf: "flex-start",
-    marginTop: spacing.sm,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 5,
-    borderRadius: radius.lg,
+  title: { ...typography.h1, color: colors.text, marginTop: spacing.sm },
+  budget: { fontSize: 22, fontWeight: "600", color: colors.text, marginTop: 2 },
+  facts: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
+    gap: spacing.sm,
   },
-  whenText: { fontSize: 13, fontWeight: "700", color: colors.primaryDark },
-  title: { ...typography.h1, fontSize: 24, color: colors.text, flex: 1 },
-  budget: { ...typography.h2, fontSize: 20, color: colors.primary, marginTop: spacing.xs },
-  meta: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
+  fact: { flexDirection: "row", alignItems: "center", gap: spacing.sm + 2, paddingVertical: 2 },
+  factText: { ...typography.body, color: colors.text, flex: 1 },
   image: { width: "100%", height: 200, borderRadius: radius.md, marginTop: spacing.md, backgroundColor: colors.surfaceAlt },
-  description: { ...typography.body, color: colors.text, marginTop: spacing.md, lineHeight: 22 },
+  sectionLabel: { ...typography.label, color: colors.textMuted, marginTop: spacing.lg, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 },
+  description: { ...typography.body, color: colors.text, marginTop: spacing.xs, lineHeight: 22 },
   actionSpacer: { marginTop: spacing.md },
+  secureNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: spacing.sm },
+  secureNoteText: { fontSize: 12, color: colors.textMuted },
   section: { marginTop: spacing.xl, gap: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
   bidCard: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
     padding: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
     marginBottom: spacing.sm,
-    ...shadow.card,
   },
   bidHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   personRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    padding: spacing.sm + 2,
-    backgroundColor: colors.surface,
+    gap: spacing.sm + 2,
+    marginTop: spacing.lg,
+    padding: spacing.md - 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
   },
   personText: { flex: 1, gap: 2 },
-  personLabel: { fontSize: 11, color: colors.textFaint, fontWeight: "600" },
-  pressed: { opacity: 0.8 },
+  personLabel: { fontSize: 12, color: colors.textMuted },
+  pressed: { opacity: 0.6 },
   bidderName: { ...typography.bodyStrong, color: colors.text },
-  bidAmount: { ...typography.bodyStrong, color: colors.primary },
+  bidAmount: { ...typography.bodyStrong, color: colors.text },
   bidMessage: { ...typography.body, color: colors.text },
   statusPill: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm },
-  statusPillText: { fontSize: 11, fontWeight: "700", textTransform: "capitalize" },
+  statusPillText: { fontSize: 11, fontWeight: "600", textTransform: "capitalize" },
   multiline: { minHeight: 80, textAlignVertical: "top" },
 });

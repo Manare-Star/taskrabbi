@@ -21,7 +21,7 @@ export function SchedulePicker({ value, onChange }: SchedulePickerProps) {
   return (
     <View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        <Chip label="🤷 Flexible" active={value.day === null} onPress={() => pick(FLEXIBLE)} />
+        <Chip label="Flexible" active={value.day === null} onPress={() => pick(FLEXIBLE)} />
         {days.map((day) => (
           <Chip
             key={day.toDateString()}
@@ -38,7 +38,7 @@ export function SchedulePicker({ value, onChange }: SchedulePickerProps) {
           {SLOTS.map((slot) => (
             <Chip
               key={slot.key}
-              label={`${slot.emoji} ${slot.label}`}
+              label={slot.label}
               sublabel={slot.hours}
               active={value.slot === slot.key}
               onPress={() => pick({ day: value.day, slot: slot.key })}
@@ -67,31 +67,31 @@ function Chip({
   return (
     <Bouncy
       onPress={onPress}
-      pressedScale={0.92}
       containerStyle={grow ? styles.chipGrow : undefined}
       style={[styles.chip, active && styles.chipActive]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-      {sublabel ? <Text style={[styles.sublabel, active && styles.chipTextActive]}>{sublabel}</Text> : null}
+      {sublabel ? <Text style={[styles.sublabel, active && styles.sublabelActive]}>{sublabel}</Text> : null}
     </Bouncy>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm },
+  row: { flexDirection: "row", paddingHorizontal: spacing.md, paddingVertical: spacing.xs, gap: spacing.sm },
   slotRow: { marginTop: spacing.xs },
   chip: {
     alignItems: "center",
     paddingHorizontal: spacing.md - 2,
     paddingVertical: spacing.sm - 1,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.white,
   },
   chipGrow: { flex: 1 },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, color: colors.text, fontWeight: "600" },
+  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipText: { fontSize: 13, color: colors.text, fontWeight: "500" },
   sublabel: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
   chipTextActive: { color: colors.white },
+  sublabelActive: { color: "#C9CDD2" },
 });

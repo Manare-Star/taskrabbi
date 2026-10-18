@@ -4,7 +4,6 @@ import MapView, { Callout, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { useAuth } from "../../lib/auth-context";
 import { useNearbyTasks } from "../../lib/queries/tasks";
 import { TaskCard } from "../../components/TaskCard";
 import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
@@ -21,20 +20,14 @@ function hasCoords(task: NearbyTask): task is NearbyTask & { task_lat: number; t
   return Number.isFinite(task.task_lat) && Number.isFinite(task.task_lng);
 }
 
-function greetingFor(now: Date): string {
-  const hour = now.getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function BrowseScreen() {
-  const { profile } = useAuth();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<ViewMode>("list");
+  // Suburb or town name for the header, from the phone's own reverse geocoder. Optional.
+  const [placeName, setPlaceName] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -45,6 +38,12 @@ export default function BrowseScreen() {
       }
       const position = await Location.getCurrentPositionAsync({});
       setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+      try {
+        const [place] = await Location.reverseGeocodeAsync(position.coords);
+        setPlaceName(place?.district || place?.subregion || place?.city || null);
+      } catch {
+        // The header just leaves the place name out.
+      }
     })();
   }, []);
 
@@ -66,7 +65,7 @@ export default function BrowseScreen() {
   const pinnedTasks = useMemo(() => (filteredTasks ?? []).filter(hasCoords), [filteredTasks]);
 
   if (locationError) {
-    return <EmptyState emoji="🧭" title="Where are you?" subtitle={locationError} />;
+    return <EmptyState icon="location-outline" title="Location is off" subtitle={locationError} />;
   }
 
   const toggleMode = () => {
@@ -83,7 +82,7 @@ export default function BrowseScreen() {
       );
     }
     if (error) {
-      return <EmptyState emoji="😵‍💫" title="Couldn't load tasks" subtitle={(error as Error).message} />;
+      return <EmptyState icon="cloud-offline-outline" title="Couldn't load tasks" subtitle={(error as Error).message} />;
     }
 
     if (mode === "map") {
@@ -108,7 +107,7 @@ export default function BrowseScreen() {
                     <Text style={styles.calloutMeta}>
                       {formatMoney(task.budget)} · {task.category}
                     </Text>
-                    <Text style={styles.calloutLink}>Tap to view</Text>
+                    <Text style={styles.calloutLink}>View task</Text>
                   </View>
                 </Callout>
               </Marker>
@@ -137,9 +136,9 @@ export default function BrowseScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         ListEmptyComponent={
           <EmptyState
-            emoji={search ? "🔍" : "🌤️"}
-            title={search ? "Nothing matches that" : "All quiet nearby"}
-            subtitle={search ? "Try a different search term." : "Check back soon, or try another category."}
+            icon={search ? "search-outline" : "map-outline"}
+            title={search ? "No matching tasks" : "No open tasks nearby"}
+            subtitle={search ? "Try a different search term." : "New tasks appear here as they're posted. Try another category."}
           />
         }
         renderItem={({ item }) => <TaskCard task={item} onPress={() => router.push(`/task/${item.id}`)} />}
@@ -147,30 +146,24 @@ export default function BrowseScreen() {
     );
   };
 
-  const firstName = profile?.full_name.split(" ")[0] || "there";
   const count = filteredTasks?.length ?? 0;
-  const tagline = !coords || isLoading
-    ? "Finding tasks around you..."
-    : count === 0
-      ? "Quiet around here — check back soon ☕"
-      : `${count} ${count === 1 ? "task" : "tasks"} near you, ready to go`;
+  const summary = !coords || isLoading ? "Finding tasks near you" : `${count} open`;
+  const tagline = placeName ? `${placeName} · ${summary}` : summary;
 
   return (
     <View style={styles.flex}>
-      <View style={styles.greeting}>
-        <Text style={styles.greetingTitle}>
-          {greetingFor(new Date())}, {firstName} 👋
-        </Text>
-        <Text style={styles.greetingSubtitle}>{tagline}</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Tasks near you</Text>
+        <Text style={styles.headerSubtitle}>{tagline}</Text>
       </View>
       <View style={styles.toolbar}>
         <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={colors.textFaint} />
+          <Ionicons name="search-outline" size={17} color={colors.textFaint} />
           <TextInput
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder="Search tasks..."
+            placeholder="Search tasks"
             placeholderTextColor={colors.textFaint}
           />
         </View>
@@ -179,7 +172,7 @@ export default function BrowseScreen() {
           onPress={toggleMode}
           accessibilityLabel={mode === "list" ? "Show map" : "Show list"}
         >
-          <Ionicons name={mode === "list" ? "map-outline" : "list-outline"} size={20} color={colors.primaryDark} />
+          <Ionicons name={mode === "list" ? "map-outline" : "list-outline"} size={19} color={colors.text} />
         </Pressable>
       </View>
       <CategoryFilterChips categories={TASK_CATEGORIES} selected={category} onSelect={setCategory} />
@@ -190,10 +183,10 @@ export default function BrowseScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  listContent: { padding: spacing.md },
-  greeting: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
-  greetingTitle: { ...typography.h2, color: colors.text },
-  greetingSubtitle: { ...typography.body, color: colors.textMuted, marginTop: 2 },
+  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, flexGrow: 1 },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  headerTitle: { ...typography.h1, color: colors.text },
+  headerSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -208,18 +201,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
+    paddingVertical: spacing.sm + 1,
+    backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
   modeButton: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -227,7 +222,7 @@ const styles = StyleSheet.create({
   callout: { minWidth: 160, maxWidth: 220, padding: 4, gap: 2 },
   calloutTitle: { ...typography.bodyStrong, fontSize: 14, color: colors.text },
   calloutMeta: { fontSize: 12, color: colors.textMuted },
-  calloutLink: { fontSize: 12, color: colors.primary, fontWeight: "600", marginTop: 2 },
+  calloutLink: { fontSize: 12, color: colors.primary, fontWeight: "500", marginTop: 2 },
   mapNotice: {
     position: "absolute",
     left: spacing.md,

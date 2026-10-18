@@ -16,7 +16,7 @@ import { useAuth } from "../../lib/auth-context";
 import { useMarkThreadRead, useSendMessage, useThread, useThreadMessages } from "../../lib/queries/chat";
 import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { colors, radius, spacing, typography } from "../../lib/theme";
 import { haptics } from "../../lib/haptics";
 import type { ChatMessage } from "../../lib/types";
 
@@ -152,7 +152,9 @@ export default function ChatThreadScreen() {
         data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<EmptyState emoji="👋" title="Say hi!" subtitle="Break the ice and sort out the details." />}
+        ListEmptyComponent={
+          <EmptyState icon="chatbubble-outline" title="Start the conversation" subtitle="Agree on the time, place and any details here." />
+        }
         renderItem={({ item }) => {
           if (item.kind === "divider") {
             return (
@@ -179,7 +181,7 @@ export default function ChatThreadScreen() {
           style={styles.input}
           value={body}
           onChangeText={setBody}
-          placeholder="Type a message..."
+          placeholder="Message"
           placeholderTextColor={colors.textFaint}
           multiline
         />
@@ -188,7 +190,7 @@ export default function ChatThreadScreen() {
           style={[styles.sendButton, !body.trim() && styles.sendButtonDisabled]}
           disabled={!body.trim()}
         >
-          <Ionicons name="send" size={18} color={colors.white} />
+          <Ionicons name="arrow-up" size={20} color={colors.white} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -196,7 +198,7 @@ export default function ChatThreadScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.surface },
+  flex: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   headerTextCol: { maxWidth: 190 },
@@ -206,9 +208,9 @@ const styles = StyleSheet.create({
   dividerRow: { alignItems: "center", marginVertical: spacing.sm },
   dividerText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "500",
     color: colors.textMuted,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.sm,
@@ -217,9 +219,9 @@ const styles = StyleSheet.create({
   bubbleRow: { marginBottom: spacing.sm, maxWidth: "80%" },
   bubbleRowMine: { alignSelf: "flex-end", alignItems: "flex-end" },
   bubbleRowTheirs: { alignSelf: "flex-start", alignItems: "flex-start" },
-  bubble: { padding: spacing.sm + 4, borderRadius: radius.md },
-  bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4, ...shadow.card },
-  bubbleTheirs: { backgroundColor: colors.white, borderBottomLeftRadius: 4, ...shadow.card },
+  bubble: { paddingHorizontal: spacing.md - 4, paddingVertical: spacing.sm + 1, borderRadius: radius.lg },
+  bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  bubbleTheirs: { backgroundColor: colors.surfaceAlt, borderBottomLeftRadius: 4 },
   bubbleTextMine: { ...typography.body, color: colors.white },
   bubbleTextTheirs: { ...typography.body, color: colors.text },
   timeText: { fontSize: 10, color: colors.textFaint, marginTop: 2, marginHorizontal: 4 },
@@ -231,14 +233,14 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     gap: spacing.sm,
     backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderStrong,
   },
   input: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.xl,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     maxHeight: 100,
@@ -247,12 +249,11 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    width: 42,
-    height: 42,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    ...shadow.button,
   },
-  sendButtonDisabled: { backgroundColor: colors.borderStrong, shadowOpacity: 0, elevation: 0 },
+  sendButtonDisabled: { backgroundColor: colors.borderStrong },
 });

@@ -5,7 +5,7 @@ import { useMyThreads, useUnreadCounts, type InboxThread } from "../../lib/queri
 import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
-import { colors, radius, shadow, spacing, statusColors, typography } from "../../lib/theme";
+import { colors, radius, spacing, statusColors, typography } from "../../lib/theme";
 
 // "3:42 PM" today, "Mon" within the week, "12 Sep" otherwise — the usual inbox convention.
 function shortTimestamp(iso: string): string {
@@ -40,9 +40,9 @@ export default function MessagesScreen() {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       ListEmptyComponent={
         <EmptyState
-          emoji="💬"
-          title="No chats yet"
-          subtitle="Conversations start as soon as a bid is accepted."
+          icon="chatbubble-outline"
+          title="No conversations yet"
+          subtitle="A chat opens with the other person as soon as a bid is accepted."
         />
       }
       renderItem={({ item }) => {
@@ -57,10 +57,10 @@ export default function MessagesScreen() {
 
         return (
           <Pressable
-            style={({ pressed }) => [styles.row, unread > 0 && styles.rowUnread, pressed && styles.rowPressed]}
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             onPress={() => router.push(`/chat/${item.id}`)}
           >
-            <Avatar name={other.full_name} url={other.avatar_url} size={48} />
+            <Avatar name={other.full_name} url={other.avatar_url} size={44} />
             <View style={styles.rowText}>
               <View style={styles.topLine}>
                 <Text style={styles.name} numberOfLines={1}>
@@ -100,22 +100,19 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { padding: spacing.md, flexGrow: 1 },
+  listContent: { paddingHorizontal: spacing.md, flexGrow: 1 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    marginBottom: spacing.sm,
-    ...shadow.card,
+    gap: spacing.md - 4,
+    paddingVertical: spacing.md - 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
   },
-  rowPressed: { opacity: 0.9 },
-  rowUnread: { borderLeftWidth: 4, borderLeftColor: colors.primary },
-  timeUnread: { color: colors.primary, fontWeight: "700" },
+  rowPressed: { opacity: 0.6 },
+  timeUnread: { color: colors.primary, fontWeight: "600" },
   previewLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  previewUnread: { fontWeight: "700" },
+  previewUnread: { fontWeight: "600" },
   unreadBubble: {
     minWidth: 20,
     height: 20,
@@ -125,7 +122,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
+  unreadText: { color: colors.white, fontSize: 11, fontWeight: "700" },
   rowText: { flex: 1, gap: 3 },
   topLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   name: { ...typography.bodyStrong, color: colors.text, flex: 1 },
@@ -133,7 +130,7 @@ const styles = StyleSheet.create({
   taskLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   taskTitle: { fontSize: 13, color: colors.textMuted, flexShrink: 1 },
   statusPill: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.sm },
-  statusText: { fontSize: 10, fontWeight: "700" },
+  statusText: { fontSize: 10, fontWeight: "600" },
   preview: { fontSize: 14, color: colors.text, flex: 1 },
   previewEmpty: { color: colors.textFaint, fontStyle: "italic" },
 });

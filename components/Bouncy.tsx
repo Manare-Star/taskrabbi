@@ -6,16 +6,17 @@ interface BouncyProps extends Omit<PressableProps, "style" | "children"> {
   // Layout for the outer touch target, e.g. { flex: 1 } so it can share a row.
   containerStyle?: StyleProp<ViewStyle>;
   children: ReactNode;
-  // How far it squishes on press; cards squish less than buttons.
+  // How far it presses in; cards press in less than buttons.
   pressedScale?: number;
 }
 
-// A Pressable that springs down on touch and bounces back on release.
+// A Pressable that presses in slightly on touch and eases back on release: tactile, without
+// the springy overshoot.
 export function Bouncy({
   style,
   containerStyle,
   children,
-  pressedScale = 0.96,
+  pressedScale = 0.98,
   onPressIn,
   onPressOut,
   disabled,
@@ -23,8 +24,8 @@ export function Bouncy({
 }: BouncyProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
-  const springTo = (toValue: number) =>
-    Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: toValue === 1 ? 12 : 0 }).start();
+  const easeTo = (toValue: number) =>
+    Animated.timing(scale, { toValue, duration: toValue === 1 ? 140 : 90, useNativeDriver: true }).start();
 
   return (
     <Pressable
@@ -32,11 +33,11 @@ export function Bouncy({
       style={containerStyle}
       disabled={disabled}
       onPressIn={(e) => {
-        springTo(pressedScale);
+        easeTo(pressedScale);
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        springTo(1);
+        easeTo(1);
         onPressOut?.(e);
       }}
     >

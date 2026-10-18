@@ -6,15 +6,14 @@ export type SlotKey = "morning" | "afternoon" | "evening";
 export interface Slot {
   key: SlotKey;
   label: string;
-  emoji: string;
   startHour: number;
   hours: string;
 }
 
 export const SLOTS: Slot[] = [
-  { key: "morning", label: "Morning", emoji: "🌅", startHour: 8, hours: "8am–12pm" },
-  { key: "afternoon", label: "Afternoon", emoji: "☀️", startHour: 12, hours: "12–5pm" },
-  { key: "evening", label: "Evening", emoji: "🌙", startHour: 17, hours: "5–8pm" },
+  { key: "morning", label: "Morning", startHour: 8, hours: "8am–12pm" },
+  { key: "afternoon", label: "Afternoon", startHour: 12, hours: "12–5pm" },
+  { key: "evening", label: "Evening", startHour: 17, hours: "5–8pm" },
 ];
 
 export type ScheduleValue = { day: null } | { day: Date; slot: SlotKey };
@@ -65,12 +64,12 @@ function slotForHour(hour: number): Slot {
   return SLOTS[0];
 }
 
-// "Tomorrow · 🌅 Morning", "Wed, 15 Oct · 🌙 Evening", or "Flexible" when unscheduled.
+// "Tomorrow · Morning", "Wed, 15 Oct · Evening", or "Flexible timing" when unscheduled.
 export function describeSchedule(scheduledFor: string | null | undefined, now = new Date()): string {
   if (!scheduledFor) return "Flexible timing";
   const at = new Date(scheduledFor);
   const slot = slotForHour(at.getHours());
-  return `${dayLabel(at, now)} · ${slot.emoji} ${slot.label}`;
+  return `${dayLabel(at, now)} · ${slot.label}`;
 }
 
 // A scheduled date that's already gone by (before today) — shown muted rather than hidden.

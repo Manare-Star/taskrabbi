@@ -81,7 +81,7 @@ export default function ProfileScreen() {
             {uploadAvatar.isPending ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Ionicons name="camera" size={14} color={colors.white} />
+              <Ionicons name="camera-outline" size={14} color={colors.white} />
             )}
           </View>
         </Pressable>
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
         multiline
         numberOfLines={4}
         style={styles.multiline}
-        placeholder="Tell people a bit about yourself..."
+        placeholder="Your experience, skills and the areas you cover"
       />
 
       <Button title="Save changes" onPress={onSave} loading={updateProfile.isPending} />
@@ -116,7 +116,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg },
+  content: { padding: spacing.md, paddingBottom: spacing.xl },
   header: { alignItems: "center", marginBottom: spacing.lg },
   avatarWrapper: { marginBottom: spacing.sm },
   avatarEditBadge: {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: { ...typography.caption, color: colors.primaryDark, fontSize: 12 },
   ratingSpacer: { marginTop: spacing.sm },
-  divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.lg },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderStrong, marginBottom: spacing.lg },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   signOutSpacer: { marginTop: spacing.md },
 });

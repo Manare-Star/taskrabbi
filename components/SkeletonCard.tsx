@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
-import { colors, radius, shadow, spacing } from "../lib/theme";
+import { colors, radius, spacing } from "../lib/theme";
 
+// Placeholder shaped like a TaskCard row while the list loads.
 export function SkeletonCard() {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const opacity = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 800, useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -17,14 +18,15 @@ export function SkeletonCard() {
   }, [opacity]);
 
   return (
-    <Animated.View style={[styles.card, { opacity }]}>
-      <View style={styles.image} />
-      <View style={styles.headerRow}>
-        <View style={styles.titleBlock} />
-        <View style={styles.budgetBlock} />
+    <Animated.View style={[styles.row, { opacity }]}>
+      <View style={styles.icon} />
+      <View style={styles.text}>
+        <View style={styles.titleRow}>
+          <View style={styles.titleBlock} />
+          <View style={styles.priceBlock} />
+        </View>
+        <View style={styles.metaBlock} />
       </View>
-      <View style={styles.lineBlock} />
-      <View style={[styles.lineBlock, { width: "60%" }]} />
     </Animated.View>
   );
 }
@@ -40,16 +42,18 @@ export function SkeletonList({ count = 4 }: { count?: number }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadow.card,
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md - 4,
+    paddingVertical: spacing.md - 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  image: { width: "100%", height: 100, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt, marginBottom: spacing.sm },
-  headerRow: { flexDirection: "row", justifyContent: "space-between" },
-  titleBlock: { height: 16, width: "55%", borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
-  budgetBlock: { height: 16, width: 40, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
-  lineBlock: { height: 12, width: "90%", borderRadius: radius.sm, backgroundColor: colors.surfaceAlt, marginTop: spacing.sm },
+  icon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  text: { flex: 1, gap: 8 },
+  titleRow: { flexDirection: "row", justifyContent: "space-between" },
+  titleBlock: { height: 14, width: "55%", borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  priceBlock: { height: 14, width: 48, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  metaBlock: { height: 11, width: "70%", borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
 });

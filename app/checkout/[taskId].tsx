@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useTask } from "../../lib/queries/tasks";
 import { useStartPaystackCheckout, useVerifyPaystackPayment, type PaystackCheckout } from "../../lib/queries/payments";
 import { Button } from "../../components/Button";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { colors, radius, spacing, typography } from "../../lib/theme";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
 import { useCelebrate } from "../../lib/celebration";
@@ -39,7 +39,7 @@ export default function CheckoutScreen() {
     setSheetOpen(false);
     try {
       await verifyPayment.mutateAsync({ taskId, reference: checkout.reference });
-      celebrate("Paid! Task complete 🎉");
+      celebrate("Payment complete", { confetti: true });
       router.replace(`/task/${taskId}`);
     } catch (err) {
       haptics.error();
@@ -66,13 +66,16 @@ export default function CheckoutScreen() {
     <View style={styles.content}>
       <View style={styles.card}>
         <View style={styles.iconCircle}>
-          <Ionicons name="card" size={26} color={colors.primary} />
+          <Ionicons name="card-outline" size={24} color={colors.primary} />
         </View>
         <Text style={styles.title} numberOfLines={2}>
           {task?.title ?? "Checkout"}
         </Text>
         {checkout && <Text style={styles.amount}>{formatMoney(checkout.amount, { cents: true })}</Text>}
-        <Text style={styles.secured}>🔒 Secured by Paystack</Text>
+        <View style={styles.securedRow}>
+          <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.secured}>Secured by Paystack</Text>
+        </View>
       </View>
 
       <View style={styles.hintRow}>
@@ -87,7 +90,7 @@ export default function CheckoutScreen() {
         <ActivityIndicator color={colors.primary} style={styles.spinner} />
       ) : (
         <Button
-          title={verifyPayment.isPending ? "Confirming payment..." : "Pay now"}
+          title={verifyPayment.isPending ? "Confirming payment…" : "Pay now"}
           onPress={() => setSheetOpen(true)}
           loading={verifyPayment.isPending}
         />
@@ -118,10 +121,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
     padding: spacing.xl,
     alignItems: "center",
     marginBottom: spacing.lg,
-    ...shadow.raised,
   },
   iconCircle: {
     width: 56,
@@ -133,8 +137,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: { ...typography.h3, color: colors.text, textAlign: "center" },
-  amount: { ...typography.h1, fontSize: 36, color: colors.primary, marginTop: spacing.sm },
-  secured: { fontSize: 12, color: colors.textMuted, marginTop: spacing.sm, fontWeight: "600" },
+  amount: { ...typography.h1, fontSize: 36, color: colors.text, marginTop: spacing.sm },
+  securedRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.sm },
+  secured: { fontSize: 12, color: colors.textMuted },
   hintRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -149,10 +154,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
   },
   sheetTitle: { ...typography.h3, color: colors.text },
-  sheetCancel: { ...typography.bodyStrong, color: colors.primary },
+  sheetCancel: { ...typography.body, color: colors.primary },
   webLoading: { position: "absolute", top: "45%", alignSelf: "center" },
 });

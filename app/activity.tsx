@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../lib/auth-context";
 import { useMarkNotificationsRead, useNotifications } from "../lib/queries/notifications";
 import { Bouncy } from "../components/Bouncy";
 import { EmptyState } from "../components/EmptyState";
 import { SkeletonList } from "../components/SkeletonCard";
-import { colors, radius, shadow, spacing, typography } from "../lib/theme";
+import { colors, radius, spacing, typography } from "../lib/theme";
 import { timeAgo } from "../lib/format";
 import type { AppNotification, NotificationKind } from "../lib/types";
 
-const KIND_STYLE: Record<NotificationKind, { emoji: string; tint: string }> = {
-  new_bid: { emoji: "💼", tint: "#E9F1FC" },
-  bid_accepted: { emoji: "🎉", tint: "#EAF6EC" },
-  bid_rejected: { emoji: "🙏", tint: "#EFF2EF" },
-  task_paid: { emoji: "💸", tint: "#FBF5E4" },
-  new_review: { emoji: "⭐", tint: "#FDF1E7" },
+const KIND_ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
+  new_bid: "pricetag-outline",
+  bid_accepted: "checkmark-circle-outline",
+  bid_rejected: "close-circle-outline",
+  task_paid: "wallet-outline",
+  new_review: "star-outline",
 };
 
 export default function ActivityScreen() {
@@ -43,7 +44,7 @@ export default function ActivityScreen() {
   }
 
   if (error) {
-    return <EmptyState emoji="😵‍💫" title="Couldn't load activity" subtitle={(error as Error).message} />;
+    return <EmptyState icon="cloud-offline-outline" title="Couldn't load activity" subtitle={(error as Error).message} />;
   }
 
   const open = (item: AppNotification) => {
@@ -58,22 +59,22 @@ export default function ActivityScreen() {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       ListEmptyComponent={
         <EmptyState
-          emoji="🔔"
-          title="Nothing yet"
+          icon="notifications-outline"
+          title="No activity yet"
           subtitle="Bids, hires, payments and reviews will show up here as they happen."
         />
       }
       renderItem={({ item }) => {
-        const style = KIND_STYLE[item.kind] ?? KIND_STYLE.new_bid;
+        const icon = KIND_ICON[item.kind] ?? "notifications-outline";
         const isFresh = freshIds.has(item.id) || !item.read_at;
         return (
           <Bouncy
             onPress={() => open(item)}
-            pressedScale={0.98}
-            style={[styles.row, isFresh && styles.rowFresh]}
+            pressedScale={0.99}
+            style={styles.row}
           >
-            <View style={[styles.emojiBadge, { backgroundColor: style.tint }]}>
-              <Text style={styles.emoji}>{style.emoji}</Text>
+            <View style={[styles.iconBox, isFresh && styles.iconBoxFresh]}>
+              <Ionicons name={icon} size={19} color={isFresh ? colors.primary : colors.textMuted} />
             </View>
             <View style={styles.rowText}>
               <Text style={[styles.title, isFresh && styles.titleFresh]} numberOfLines={2}>
@@ -97,23 +98,27 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { padding: spacing.md, flexGrow: 1 },
+  listContent: { paddingHorizontal: spacing.md, flexGrow: 1 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    marginBottom: spacing.sm,
-    ...shadow.card,
+    gap: spacing.md - 4,
+    paddingVertical: spacing.md - 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
   },
-  rowFresh: { backgroundColor: colors.primaryLight },
-  emojiBadge: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  emoji: { fontSize: 22 },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBoxFresh: { backgroundColor: colors.primaryLight },
   rowText: { flex: 1, gap: 2 },
   title: { ...typography.body, color: colors.text },
-  titleFresh: { fontWeight: "700" },
+  titleFresh: { fontWeight: "600" },
   body: { fontSize: 13, color: colors.textMuted },
   meta: { alignItems: "flex-end", gap: 6 },
   time: { fontSize: 12, color: colors.textFaint },

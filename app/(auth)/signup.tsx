@@ -5,7 +5,7 @@ import { Link } from "expo-router";
 import { useAuth } from "../../lib/auth-context";
 import { Button } from "../../components/Button";
 import { FormInput } from "../../components/FormInput";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { colors, radius, spacing, typography } from "../../lib/theme";
 import type { UserRole } from "../../lib/types";
 import { getErrorMessage } from "../../lib/errors";
 
@@ -108,19 +108,19 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, justifyContent: "center", padding: spacing.lg },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
-  label: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
+  label: { ...typography.label, fontWeight: "500", color: colors.text, marginBottom: spacing.sm },
   roleRow: { gap: spacing.sm, marginBottom: spacing.lg },
   roleCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     backgroundColor: colors.white,
     padding: spacing.md,
   },
-  roleCardSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight, ...shadow.card },
+  roleCardSelected: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: colors.primaryLight },
   roleCardText: { flex: 1, marginRight: spacing.sm },
   roleLabel: { ...typography.bodyStrong, fontSize: 16, color: colors.text },
   roleLabelSelected: { color: colors.primaryDark },

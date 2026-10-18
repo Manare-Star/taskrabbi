@@ -1,6 +1,5 @@
 import { ScrollView, StyleSheet, Text } from "react-native";
-import { colors, radius, spacing } from "../lib/theme";
-import { categoryStyle } from "../lib/categories";
+import { colors, spacing } from "../lib/theme";
 import { haptics } from "../lib/haptics";
 import { Bouncy } from "./Bouncy";
 
@@ -8,9 +7,11 @@ interface CategoryFilterChipsProps {
   categories: readonly string[];
   selected: string | null;
   onSelect: (category: string | null) => void;
+  // The "All" chip clears the filter; leave it out when a category must be chosen.
+  showAll?: boolean;
 }
 
-export function CategoryFilterChips({ categories, selected, onSelect }: CategoryFilterChipsProps) {
+export function CategoryFilterChips({ categories, selected, onSelect, showAll = true }: CategoryFilterChipsProps) {
   const pick = (category: string | null) => {
     haptics.select();
     onSelect(category);
@@ -23,64 +24,39 @@ export function CategoryFilterChips({ categories, selected, onSelect }: Category
       contentContainerStyle={styles.row}
       style={styles.container}
     >
-      <Chip label="All" emoji="🌈" color={colors.primary} active={selected === null} onPress={() => pick(null)} />
-      {categories.map((category) => {
-        const style = categoryStyle(category);
-        return (
-          <Chip
-            key={category}
-            label={category}
-            emoji={style.emoji}
-            color={style.color}
-            active={selected === category}
-            onPress={() => pick(category)}
-          />
-        );
-      })}
+      {showAll && <Chip label="All" active={selected === null} onPress={() => pick(null)} />}
+      {categories.map((category) => (
+        <Chip key={category} label={category} active={selected === category} onPress={() => pick(category)} />
+      ))}
     </ScrollView>
   );
 }
 
-function Chip({
-  label,
-  emoji,
-  color,
-  active,
-  onPress,
-}: {
-  label: string;
-  emoji: string;
-  color: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Bouncy
       onPress={onPress}
-      pressedScale={0.92}
-      style={[styles.chip, active && { backgroundColor: color, borderColor: color }]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={[styles.chip, active && styles.chipActive]}
     >
-      <Text style={styles.chipEmoji}>{emoji}</Text>
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </Bouncy>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { maxHeight: 58 },
+  container: { maxHeight: 52 },
   row: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.sm },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
     paddingHorizontal: spacing.md - 2,
-    paddingVertical: spacing.sm - 1,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    paddingVertical: 6,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.white,
   },
-  chipEmoji: { fontSize: 14 },
-  chipText: { fontSize: 13, color: colors.text, fontWeight: "600" },
+  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipText: { fontSize: 13, color: colors.text, fontWeight: "500" },
   chipTextActive: { color: colors.white },
 });

@@ -6,7 +6,7 @@ import { Avatar } from "../../components/Avatar";
 import { StarRating } from "../../components/StarRating";
 import { StarRatingInput } from "../../components/StarRatingInput";
 import { EmptyState } from "../../components/EmptyState";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { colors, radius, spacing, typography } from "../../lib/theme";
 
 const ROLE_LABEL: Record<string, string> = {
   client: "Looking for help",
@@ -70,7 +70,7 @@ export default function UserProfileScreen() {
         </View>
       }
       ListEmptyComponent={
-        <EmptyState emoji="🌱" title="No reviews yet" subtitle="Reviews appear after completed tasks." />
+        <EmptyState icon="star-outline" title="No reviews yet" subtitle="Reviews appear after completed tasks." />
       }
       renderItem={({ item }) => (
         <View style={styles.card}>
@@ -93,7 +93,7 @@ export default function UserProfileScreen() {
 
 const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { padding: spacing.lg, flexGrow: 1 },
+  content: { padding: spacing.md, flexGrow: 1 },
   header: { alignItems: "center", marginBottom: spacing.lg, gap: spacing.xs },
   name: { ...typography.h2, fontSize: 20, color: colors.text, marginTop: spacing.sm },
   roleBadge: {
@@ -108,10 +108,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
     padding: spacing.md,
     marginBottom: spacing.sm,
     gap: spacing.sm,
-    ...shadow.card,
   },
   sectionLabel: { ...typography.label, color: colors.textMuted },
   sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.md, marginBottom: spacing.sm },

@@ -26,7 +26,16 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <CelebrationProvider>
-            <Stack screenOptions={{ headerTintColor: colors.primary, headerTitleStyle: { fontWeight: "700" } }}>
+            <Stack
+              screenOptions={{
+                headerTintColor: colors.text,
+                headerTitleStyle: { fontWeight: "600", fontSize: 17, color: colors.text },
+                headerStyle: { backgroundColor: colors.background },
+                headerShadowVisible: false,
+                headerBackButtonDisplayMode: "minimal",
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            >
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

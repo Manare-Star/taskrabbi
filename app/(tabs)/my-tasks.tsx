@@ -7,7 +7,7 @@ import { useMyBids } from "../../lib/queries/bids";
 import { TaskCard } from "../../components/TaskCard";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { colors, spacing, typography } from "../../lib/theme";
 
 type Tab = "posted" | "bids";
 
@@ -40,7 +40,7 @@ export default function MyTasksScreen() {
             <RefreshControl refreshing={postedQuery.isRefetching} onRefresh={postedQuery.refetch} />
           }
           ListEmptyComponent={
-            <EmptyState emoji="📝" title="No tasks posted yet" subtitle="Got a to-do? Post it and let taskers come to you." />
+            <EmptyState icon="add-circle-outline" title="Post your first task" subtitle="Describe what you need done and taskers nearby will send offers." />
           }
           renderItem={({ item }) => <TaskCard task={item} onPress={() => router.push(`/task/${item.id}`)} />}
         />
@@ -51,7 +51,7 @@ export default function MyTasksScreen() {
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={bidsQuery.isRefetching} onRefresh={bidsQuery.refetch} />}
           ListEmptyComponent={
-            <EmptyState emoji="💪" title="No bids yet" subtitle="Browse nearby tasks and make your first offer." />
+            <EmptyState icon="pricetag-outline" title="Make your first offer" subtitle="Tasks you bid on appear here. Find one on Browse." />
           }
           renderItem={({ item }) => (
             <TaskCard task={item.task} onPress={() => router.push(`/task/${item.task_id}`)} />
@@ -64,7 +64,12 @@ export default function MyTasksScreen() {
 
 function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable style={[styles.tabButton, active && styles.tabButtonActive]} onPress={onPress}>
+    <Pressable
+      style={[styles.tabButton, active && styles.tabButtonActive]}
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+    >
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
     </Pressable>
   );
@@ -72,22 +77,22 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
+  // Underlined segment tabs, the quieter alternative to a filled toggle.
   tabRow: {
     flexDirection: "row",
-    margin: spacing.md,
-    padding: 4,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    gap: 4,
+    marginHorizontal: spacing.md,
+    gap: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
   },
   tabButton: {
-    flex: 1,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.sm,
-    alignItems: "center",
+    paddingVertical: spacing.sm + 4,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -StyleSheet.hairlineWidth,
   },
-  tabButtonActive: { backgroundColor: colors.white, ...shadow.card },
-  tabLabel: { ...typography.caption, color: colors.textMuted },
-  tabLabelActive: { color: colors.primaryDark },
-  listContent: { padding: spacing.md, paddingTop: 0, flexGrow: 1 },
+  tabButtonActive: { borderBottomColor: colors.ink },
+  tabLabel: { ...typography.label, fontWeight: "500", color: colors.textMuted },
+  tabLabelActive: { color: colors.text },
+  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, flexGrow: 1 },
 });

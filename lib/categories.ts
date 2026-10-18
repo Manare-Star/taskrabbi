@@ -1,23 +1,20 @@
-// Playful per-category identity: an emoji plus a color, with a light tint for backgrounds.
-export interface CategoryStyle {
-  emoji: string;
-  color: string;
-  tint: string;
-}
+import type { Ionicons } from "@expo/vector-icons";
 
-const CATEGORY_STYLES: Record<string, CategoryStyle> = {
-  "Furniture Assembly": { emoji: "🪑", color: "#8E5BD9", tint: "#F3ECFC" },
-  "Moving Help": { emoji: "📦", color: "#E07A2F", tint: "#FDF1E7" },
-  Cleaning: { emoji: "🧽", color: "#1E9BD7", tint: "#E7F5FC" },
-  Handyman: { emoji: "🔧", color: "#D64545", tint: "#FCEBEB" },
-  Delivery: { emoji: "🚚", color: "#2F7FD6", tint: "#E9F1FC" },
-  "Yard Work": { emoji: "🌿", color: "#3A9B48", tint: "#EAF6EC" },
-  "Mounting & Installation": { emoji: "🖼️", color: "#C2559A", tint: "#FBEAF4" },
-  Other: { emoji: "✨", color: "#C99A1E", tint: "#FBF5E4" },
+// Each category gets a line icon. Colour stays neutral so the list reads calmly; the
+// category is recognised by its icon and name.
+type IconName = keyof typeof Ionicons.glyphMap;
+
+const CATEGORY_ICONS: Record<string, IconName> = {
+  "Furniture Assembly": "bed-outline",
+  "Moving Help": "cube-outline",
+  Cleaning: "sparkles-outline",
+  Handyman: "hammer-outline",
+  Delivery: "bicycle-outline",
+  "Yard Work": "leaf-outline",
+  "Mounting & Installation": "tv-outline",
+  Other: "ellipsis-horizontal-circle-outline",
 };
 
-const FALLBACK: CategoryStyle = { emoji: "✨", color: "#6B7370", tint: "#EFF2EF" };
-
-export function categoryStyle(category: string | null | undefined): CategoryStyle {
-  return (category && CATEGORY_STYLES[category]) || FALLBACK;
+export function categoryIcon(category: string | null | undefined): IconName {
+  return (category && CATEGORY_ICONS[category]) || "ellipsis-horizontal-circle-outline";
 }
