@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, type ScrollViewInstance, type StyleProp, type ViewStyle } from "react-native";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { colors, spacing } from "../lib/theme";
 
@@ -7,7 +7,7 @@ interface FormScreenProps {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   // For scrolling back to the top, e.g. to show a validation summary.
-  scrollRef?: RefObject<ScrollView | null>;
+  scrollRef?: RefObject<ScrollViewInstance | null>;
 }
 
 // A scrolling screen with text fields: the keyboard never covers the focused field, taps on

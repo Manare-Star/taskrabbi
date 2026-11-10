@@ -43,11 +43,11 @@ export default function BlockedUsersScreen() {
       data={blocked}
       keyExtractor={(item) => item.blocked_id}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.primary} />}
       ListHeaderComponent={
         blocked?.length ? (
           <Text style={styles.intro}>People you've blocked can't bid on your tasks or message you, and you won't see their tasks.</Text>
-        ) : null
+        ) : undefined
       }
       ListEmptyComponent={
         <EmptyState

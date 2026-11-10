@@ -65,7 +65,7 @@ export default function ActivityScreen() {
       data={notifications}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.primary} />}
       ListEmptyComponent={
         <EmptyState
           icon="notifications-outline"

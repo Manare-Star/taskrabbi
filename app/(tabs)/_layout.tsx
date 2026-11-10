@@ -1,4 +1,3 @@
-import type { ColorValue } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth-context";
@@ -10,9 +9,10 @@ import { colors } from "../../lib/theme";
 type IconName = keyof typeof Ionicons.glyphMap;
 
 // Outline when idle, filled when selected: the standard tab bar cue alongside the colour.
+// The colours match tabBarActiveTintColor / tabBarInactiveTintColor below.
 function tabIcon(idle: IconName, selected: IconName) {
-  return function TabIcon({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) {
-    return <Ionicons name={focused ? selected : idle} color={color} size={size - 1} />;
+  return function TabIcon({ size, focused }: { size: number; focused: boolean }) {
+    return <Ionicons name={focused ? selected : idle} color={focused ? colors.primary : colors.textFaint} size={size - 1} />;
   };
 }
 

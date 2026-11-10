@@ -117,7 +117,7 @@ export default function BrowseScreen() {
         contentContainerStyle={styles.listContent}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.primary} />}
         ListEmptyComponent={
           search ? (
             <EmptyState

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,7 +41,7 @@ export default function PostTaskScreen() {
   const { profile } = useAuth();
   const createTask = useCreateTask();
   const toast = useToast();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

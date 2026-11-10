@@ -66,7 +66,7 @@ export default function MyTasksScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={postedQuery.isRefetching} onRefresh={postedQuery.refetch} tintColor={colors.primary} />
+            <RefreshControl refreshing={postedQuery.isRefetching} onRefresh={() => void postedQuery.refetch()} tintColor={colors.primary} />
           }
           ListEmptyComponent={
             <EmptyState
@@ -84,7 +84,7 @@ export default function MyTasksScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={bidsQuery.isRefetching} onRefresh={bidsQuery.refetch} tintColor={colors.primary} />
+            <RefreshControl refreshing={bidsQuery.isRefetching} onRefresh={() => void bidsQuery.refetch()} tintColor={colors.primary} />
           }
           ListEmptyComponent={
             <EmptyState
