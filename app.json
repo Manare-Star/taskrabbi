@@ -37,7 +37,8 @@
         {
           "photosPermission": "Allow access to your photos to add a picture to your profile or task."
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
     "extra": {
       "router": {
