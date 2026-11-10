@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest",
-    "test:db": "node --test tests/db/",
+    "test:db": "node --test \"tests/db/*.test.mjs\"",
     "icons": "node scripts/generate-icons.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:db"
   },
