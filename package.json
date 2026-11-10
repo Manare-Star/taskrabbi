@@ -9,9 +9,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint",
+    "lint": "eslint .",
     "test": "jest",
     "test:db": "node --test tests/db/",
+    "icons": "node scripts/generate-icons.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:db"
   },
   "dependencies": {
@@ -55,5 +56,15 @@
     "jest-expo": "~57.0.6",
     "supabase": "^2.115.0",
     "typescript": "~6.0.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "testMatch": [
+      "<rootDir>/tests/unit/**/*.test.ts"
+    ],
+    "clearMocks": true,
+    "moduleNameMapper": {
+      "^expo-modules-core(.*)$": "<rootDir>/node_modules/expo/node_modules/expo-modules-core$1"
+    }
   }
 }

@@ -8,6 +8,7 @@ import { Bouncy } from "../components/Bouncy";
 import { EmptyState } from "../components/EmptyState";
 import { SkeletonList } from "../components/SkeletonCard";
 import { colors, radius, spacing, typography } from "../lib/theme";
+import { getErrorMessage } from "../lib/errors";
 import { timeAgo } from "../lib/format";
 import type { AppNotification, NotificationKind } from "../lib/types";
 
@@ -17,6 +18,8 @@ const KIND_ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
   bid_rejected: "close-circle-outline",
   task_paid: "wallet-outline",
   new_review: "star-outline",
+  task_done: "checkmark-done-outline",
+  task_cancelled: "close-circle-outline",
 };
 
 export default function ActivityScreen() {
@@ -27,13 +30,16 @@ export default function ActivityScreen() {
   // Being on this screen means you've seen everything here, including anything that arrives
   // while it's open: mark it all read, but keep what was new highlighted for this visit.
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const unreadIds = (notifications ?? []).filter((n) => !n.read_at).map((n) => n.id);
+  if (unreadIds.some((id) => !freshIds.has(id))) {
+    setFreshIds(new Set([...freshIds, ...unreadIds]));
+  }
+
+  const unreadCount = unreadIds.length;
   useEffect(() => {
-    const unread = notifications?.filter((n) => !n.read_at) ?? [];
-    if (unread.length === 0) return;
-    setFreshIds((previous) => new Set([...previous, ...unread.map((n) => n.id)]));
-    if (!markRead.isPending) markRead.mutate();
+    if (unreadCount > 0 && !markRead.isPending) markRead.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications]);
+  }, [unreadCount]);
 
   if (isLoading) {
     return (
@@ -44,19 +50,22 @@ export default function ActivityScreen() {
   }
 
   if (error) {
-    return <EmptyState icon="cloud-offline-outline" title="Couldn't load activity" subtitle={(error as Error).message} />;
+    return (
+      <EmptyState
+        icon="cloud-offline-outline"
+        title="Couldn't load activity"
+        subtitle={getErrorMessage(error)}
+        action={{ label: "Try again", onPress: () => refetch() }}
+      />
+    );
   }
-
-  const open = (item: AppNotification) => {
-    if (item.task_id) router.push(`/task/${item.task_id}`);
-  };
 
   return (
     <FlatList<AppNotification>
       data={notifications}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       ListEmptyComponent={
         <EmptyState
           icon="notifications-outline"
@@ -67,11 +76,15 @@ export default function ActivityScreen() {
       renderItem={({ item }) => {
         const icon = KIND_ICON[item.kind] ?? "notifications-outline";
         const isFresh = freshIds.has(item.id) || !item.read_at;
+        const when = timeAgo(item.created_at);
         return (
           <Bouncy
-            onPress={() => open(item)}
+            onPress={item.task_id ? () => router.push(`/task/${item.task_id}`) : undefined}
+            disabled={!item.task_id}
             pressedScale={0.99}
             style={styles.row}
+            accessibilityRole={item.task_id ? "button" : "text"}
+            accessibilityLabel={`${isFresh ? "New. " : ""}${item.title}. ${item.body ?? ""} ${when === "now" ? "Just now" : `${when} ago`}`}
           >
             <View style={[styles.iconBox, isFresh && styles.iconBoxFresh]}>
               <Ionicons name={icon} size={19} color={isFresh ? colors.primary : colors.textMuted} />
@@ -87,7 +100,7 @@ export default function ActivityScreen() {
               ) : null}
             </View>
             <View style={styles.meta}>
-              <Text style={styles.time}>{timeAgo(item.created_at)}</Text>
+              <Text style={styles.time}>{when}</Text>
               {isFresh && <View style={styles.dot} />}
             </View>
           </Bouncy>
@@ -98,7 +111,7 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: spacing.md, flexGrow: 1 },
+  listContent: { paddingHorizontal: spacing.md, flexGrow: 1, backgroundColor: colors.background },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -119,8 +132,8 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   title: { ...typography.body, color: colors.text },
   titleFresh: { fontWeight: "600" },
-  body: { fontSize: 13, color: colors.textMuted },
+  body: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
   meta: { alignItems: "flex-end", gap: 6 },
   time: { fontSize: 12, color: colors.textFaint },
-  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
 });

@@ -68,6 +68,9 @@ function Chip({
     <Bouncy
       onPress={onPress}
       containerStyle={grow ? styles.chipGrow : undefined}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={sublabel ? `${label}, ${sublabel}` : label}
       style={[styles.chip, active && styles.chipActive]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -83,6 +86,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.md - 2,
     paddingVertical: spacing.sm - 1,
+    minHeight: 38,
+    justifyContent: "center",
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderStrong,

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../supabase";
 import { uploadImageFromUri } from "../storage";
-import type { Profile } from "../types";
+import type { Profile, UserRole } from "../types";
 
 export function useProfile(userId: string | undefined) {
   return useQuery({
@@ -18,10 +18,10 @@ export function useProfile(userId: string | undefined) {
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { userId: string; fullName: string; bio: string }) => {
+    mutationFn: async (input: { userId: string; fullName: string; bio: string; role: UserRole }) => {
       const { data, error } = await supabase
         .from("profiles")
-        .update({ full_name: input.fullName, bio: input.bio })
+        .update({ full_name: input.fullName, bio: input.bio || null, role: input.role })
         .eq("id", input.userId)
         .select()
         .single();
@@ -38,7 +38,7 @@ export function useUploadAvatar() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { userId: string; imageUri: string }) => {
-      const extension = input.imageUri.split(".").pop() ?? "jpg";
+      const extension = input.imageUri.split(".").pop()?.split("?")[0] ?? "jpg";
       const avatarUrl = await uploadImageFromUri("avatars", `${input.userId}/avatar.${extension}`, input.imageUri);
       const { data, error } = await supabase
         .from("profiles")

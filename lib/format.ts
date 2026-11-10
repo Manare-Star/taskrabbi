@@ -20,3 +20,17 @@ export function formatMoney(amount: number, { cents = false }: { cents?: boolean
   const sign = amount < 0 ? "-" : "";
   return `${sign}${CURRENCY_SYMBOL} ${grouped}${fraction ? `.${fraction}` : ""}`;
 }
+
+// Distance for a task row: "400 m", "1.2 km", "14 km". Task positions are approximate, so
+// anything under 100 m is shown as "Nearby" rather than as a precise-looking figure.
+export function formatDistance(meters: number): string {
+  if (meters < 100) return "Nearby";
+  if (meters < 1000) return `${Math.round(meters / 100) * 100} m`;
+  const km = meters / 1000;
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+}
+
+// "12 Sep 2026", for receipts and review dates. Month names come from the device locale.
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
+}

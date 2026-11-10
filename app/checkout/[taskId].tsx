@@ -1,49 +1,53 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { WebView, type WebViewNavigation } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTask } from "../../lib/queries/tasks";
-import { useStartPaystackCheckout, useVerifyPaystackPayment, type PaystackCheckout } from "../../lib/queries/payments";
+import { useBidsForTask } from "../../lib/queries/bids";
+import { usePaystackCheckout, useVerifyPaystackPayment } from "../../lib/queries/payments";
 import { Button } from "../../components/Button";
+import { EmptyState } from "../../components/EmptyState";
+import { Notice } from "../../components/Notice";
+import { ScreenLoader } from "../../components/ScreenLoader";
 import { colors, radius, spacing, typography } from "../../lib/theme";
 import { getErrorMessage } from "../../lib/errors";
 import { haptics } from "../../lib/haptics";
-import { useCelebrate } from "../../lib/celebration";
+import { useToast } from "../../lib/toast";
 import { formatMoney } from "../../lib/format";
 
+// Pay for a finished job. The amount comes from the server (the accepted bid), the card
+// details are entered on Paystack's own page inside a web view, and the task is only marked
+// complete after the server has confirmed the payment with Paystack.
 export default function CheckoutScreen() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
+  const insets = useSafeAreaInsets();
+  const toast = useToast();
   const { data: task } = useTask(taskId);
-  const startCheckout = useStartPaystackCheckout();
+  const { data: bids } = useBidsForTask(taskId);
+  const { data: checkout, error: startFailure, refetch: retryStart, isFetching: starting } = usePaystackCheckout(taskId);
   const verifyPayment = useVerifyPaystackPayment();
-  const celebrate = useCelebrate();
 
-  const [checkout, setCheckout] = useState<PaystackCheckout | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!taskId) return;
-    startCheckout
-      .mutateAsync(taskId)
-      .then(setCheckout)
-      .catch((err) => {
-        Alert.alert("Couldn't start checkout", getErrorMessage(err));
-        router.back();
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskId]);
+  const taskerName = bids?.find((bid) => bid.status === "accepted")?.tasker?.full_name;
 
-  const onCheckoutFinished = async () => {
+  // Ask the server whether Paystack received the money. Used when checkout redirects back,
+  // and by "I've already paid" if the redirect never arrived.
+  const confirmPayment = async ({ quiet }: { quiet: boolean }) => {
     if (!checkout || !taskId) return;
     setSheetOpen(false);
+    setNotice(null);
     try {
       await verifyPayment.mutateAsync({ taskId, reference: checkout.reference });
-      celebrate("Payment complete", { confetti: true });
-      router.replace(`/task/${taskId}`);
+      toast.success("Payment complete", { confetti: true });
+      // Close this modal; the task screen underneath updates itself to Completed.
+      router.back();
     } catch (err) {
       haptics.error();
-      Alert.alert("Payment not confirmed", getErrorMessage(err));
+      setNotice(quiet ? "We couldn't find a completed payment yet. If you did pay, wait a moment and check again." : getErrorMessage(err));
     }
   };
 
@@ -52,7 +56,7 @@ export default function CheckoutScreen() {
   const onNavigation = (request: WebViewNavigation) => {
     if (!checkout) return true;
     if (request.url.startsWith(checkout.callbackUrl)) {
-      onCheckoutFinished();
+      void confirmPayment({ quiet: false });
       return false;
     }
     if (request.url.startsWith(checkout.cancelUrl)) {
@@ -62,93 +66,115 @@ export default function CheckoutScreen() {
     return true;
   };
 
+  if (starting) return <ScreenLoader />;
+  if (startFailure || !checkout) {
+    return (
+      <EmptyState
+        icon="card-outline"
+        title="Couldn't start the payment"
+        subtitle={getErrorMessage(startFailure)}
+        action={{ label: "Try again", onPress: () => void retryStart() }}
+      />
+    );
+  }
+
+  const amount = formatMoney(checkout.amount, { cents: true });
+
   return (
-    <View style={styles.content}>
-      <View style={styles.card}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="card-outline" size={24} color={colors.primary} />
-        </View>
-        <Text style={styles.title} numberOfLines={2}>
-          {task?.title ?? "Checkout"}
+    <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+      <View style={styles.summary}>
+        <Text style={styles.amountLabel}>You're paying</Text>
+        <Text style={styles.amount} accessibilityRole="header">
+          {amount}
         </Text>
-        {checkout && <Text style={styles.amount}>{formatMoney(checkout.amount, { cents: true })}</Text>}
-        <View style={styles.securedRow}>
-          <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.secured}>Secured by Paystack</Text>
+        <View style={styles.rows}>
+          <SummaryRow label="For" value={task?.title ?? "Task"} />
+          {taskerName ? <SummaryRow label="To" value={taskerName} /> : null}
+          <SummaryRow label="Reference" value={checkout.reference.slice(-12)} last />
         </View>
       </View>
 
-      <View style={styles.hintRow}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-        <Text style={styles.hint}>
-          Test mode: no real money moves. Paystack's checkout lists test cards you can use (for example 4084 0840
-          8408 4081, CVV 408, any future date).
-        </Text>
-      </View>
+      {notice ? <Notice tone="warning">{notice}</Notice> : null}
 
-      {!checkout ? (
-        <ActivityIndicator color={colors.primary} style={styles.spinner} />
+      {checkout.testMode ? (
+        <Notice title="Test mode">
+          No real money moves. Use Paystack's test card 4084 0840 8408 4081, any future expiry date, CVV 408.
+        </Notice>
       ) : (
+        <Notice icon="shield-checkmark-outline">
+          Pay only once the work is done to your satisfaction. Paying completes the task.
+        </Notice>
+      )}
+
+      <View style={styles.footer}>
         <Button
-          title={verifyPayment.isPending ? "Confirming payment…" : "Pay now"}
+          title={verifyPayment.isPending ? "Confirming payment…" : `Pay ${amount}`}
+          icon="lock-closed-outline"
           onPress={() => setSheetOpen(true)}
           loading={verifyPayment.isPending}
         />
-      )}
+        <Button
+          title="I've already paid"
+          variant="ghost"
+          size="sm"
+          onPress={() => confirmPayment({ quiet: true })}
+          disabled={verifyPayment.isPending}
+        />
+        <View style={styles.securedRow}>
+          <Ionicons name="lock-closed-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.secured}>Card details go straight to Paystack. Siza never sees them.</Text>
+        </View>
+      </View>
 
       <Modal visible={sheetOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSheetOpen(false)}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Pay {checkout ? formatMoney(checkout.amount, { cents: true }) : ""}</Text>
-          <Pressable onPress={() => setSheetOpen(false)} hitSlop={12}>
+          <Text style={styles.sheetTitle}>Pay {amount}</Text>
+          <Pressable onPress={() => setSheetOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cancel payment">
             <Text style={styles.sheetCancel}>Cancel</Text>
           </Pressable>
         </View>
-        {checkout && (
-          <WebView
-            source={{ uri: checkout.authorizationUrl }}
-            onShouldStartLoadWithRequest={onNavigation}
-            startInLoadingState
-            renderLoading={() => <ActivityIndicator color={colors.primary} style={styles.webLoading} />}
-          />
-        )}
+        <WebView
+          source={{ uri: checkout.authorizationUrl }}
+          onShouldStartLoadWithRequest={onNavigation}
+          startInLoadingState
+          renderLoading={() => <ActivityIndicator color={colors.primary} style={styles.webLoading} />}
+        />
       </Modal>
     </View>
   );
 }
 
+function SummaryRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.row, !last && styles.rowDivider]}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: spacing.lg, justifyContent: "center" },
-  card: {
-    backgroundColor: colors.white,
+  content: { flex: 1, padding: spacing.md, gap: spacing.md, backgroundColor: colors.background },
+  summary: {
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderStrong,
-    padding: spacing.xl,
+    paddingTop: spacing.lg,
     alignItems: "center",
-    marginBottom: spacing.lg,
+    overflow: "hidden",
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  title: { ...typography.h3, color: colors.text, textAlign: "center" },
-  amount: { ...typography.h1, fontSize: 36, color: colors.text, marginTop: spacing.sm },
-  securedRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.sm },
+  amountLabel: { fontSize: 13, color: colors.textMuted },
+  amount: { fontSize: 38, fontWeight: "600", letterSpacing: -0.8, color: colors.text, marginTop: 2 },
+  rows: { alignSelf: "stretch", marginTop: spacing.lg, backgroundColor: colors.surface },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 3 },
+  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
+  rowLabel: { fontSize: 14, color: colors.textMuted },
+  rowValue: { fontSize: 14, color: colors.text, fontWeight: "500", flexShrink: 1, textAlign: "right" },
+  footer: { marginTop: "auto", gap: spacing.xs },
+  securedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginTop: spacing.xs },
   secured: { fontSize: 12, color: colors.textMuted },
-  hintRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.sm,
-  },
-  hint: { ...typography.caption, color: colors.textMuted, fontWeight: "400", flex: 1 },
-  spinner: { marginTop: spacing.lg },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",

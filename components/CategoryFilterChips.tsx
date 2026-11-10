@@ -50,7 +50,8 @@ const styles = StyleSheet.create({
   row: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.md - 2,
-    paddingVertical: 6,
+    minHeight: 36,
+    justifyContent: "center",
     borderRadius: 99,
     borderWidth: 1,
     borderColor: colors.borderStrong,

@@ -4,42 +4,74 @@
     "slug": "siza",
     "scheme": "siza",
     "version": "1.0.0",
+    "description": "Get help with everyday tasks from people nearby, or find work that fits your day.",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#FFFFFF",
+    "primaryColor": "#0F6E56",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "za.co.siza.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We use your location to show tasks near you and let taskers find nearby jobs."
+        "NSLocationWhenInUseUsageDescription": "Siza uses your location to show tasks near you and to set where a task you post needs doing.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "za.co.siza.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/monochrome-icon.png",
+        "backgroundColor": "#0F6E56"
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
       ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0F6E56"
+        }
+      ],
+      [
         "expo-location",
         {
-          "locationWhenInUsePermission": "We use your location to show tasks near you and let taskers find nearby jobs."
+          "locationWhenInUsePermission": "Siza uses your location to show tasks near you and to set where a task you post needs doing."
         }
       ],
       "expo-font",
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow access to your photos to add a picture to your profile or task."
+          "photosPermission": "Siza needs access to your photos so you can add a picture to your profile or to a task.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
-      "expo-splash-screen"
+      "expo-secure-store"
     ],
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
       "router": {
         "origin": false

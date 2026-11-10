@@ -5,7 +5,8 @@ import { useMyThreads, useUnreadCounts, type InboxThread } from "../../lib/queri
 import { Avatar } from "../../components/Avatar";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
-import { colors, radius, spacing, statusColors, typography } from "../../lib/theme";
+import { colors, spacing, typography } from "../../lib/theme";
+import { getErrorMessage } from "../../lib/errors";
 
 // "3:42 PM" today, "Mon" within the week, "12 Sep" otherwise — the usual inbox convention.
 function shortTimestamp(iso: string): string {
@@ -21,7 +22,7 @@ function shortTimestamp(iso: string): string {
 
 export default function MessagesScreen() {
   const { profile } = useAuth();
-  const { data: threads, isLoading, isRefetching, refetch } = useMyThreads(profile?.id);
+  const { data: threads, isLoading, isRefetching, refetch, error } = useMyThreads(profile?.id);
   const { data: unreadByThread } = useUnreadCounts(profile?.id);
 
   if (isLoading) {
@@ -32,12 +33,23 @@ export default function MessagesScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <EmptyState
+        icon="cloud-offline-outline"
+        title="Couldn't load your messages"
+        subtitle={getErrorMessage(error)}
+        action={{ label: "Try again", onPress: () => refetch() }}
+      />
+    );
+  }
+
   return (
     <FlatList<InboxThread>
       data={threads}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       ListEmptyComponent={
         <EmptyState
           icon="chatbubble-outline"
@@ -47,42 +59,32 @@ export default function MessagesScreen() {
       }
       renderItem={({ item }) => {
         const other = item.client_id === profile?.id ? item.tasker : item.client;
-        const completed = item.task.status === "completed";
-        const status = completed ? statusColors.completed : statusColors.assigned;
+        const name = other?.full_name || "Someone";
         const last = item.lastMessage;
-        const preview = last
-          ? `${last.sender_id === profile?.id ? "You: " : ""}${last.body}`
-          : "No messages yet — say hi";
+        const preview = last ? `${last.sender_id === profile?.id ? "You: " : ""}${last.body}` : "No messages yet";
         const unread = unreadByThread?.[item.id] ?? 0;
+        const when = shortTimestamp(last?.created_at ?? item.created_at);
 
         return (
           <Pressable
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             onPress={() => router.push(`/chat/${item.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`${name}, about ${item.task.title}. ${unread > 0 ? `${unread} unread. ` : ""}${preview}. ${when}`}
           >
-            <Avatar name={other.full_name} url={other.avatar_url} size={44} />
+            <Avatar name={name} url={other?.avatar_url} size={48} />
             <View style={styles.rowText}>
-              <View style={styles.topLine}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {other.full_name}
+              <View style={styles.line}>
+                <Text style={[styles.name, unread > 0 && styles.unreadStrong]} numberOfLines={1}>
+                  {name}
                 </Text>
-                <Text style={[styles.time, unread > 0 && styles.timeUnread]}>
-                  {shortTimestamp(last?.created_at ?? item.created_at)}
-                </Text>
+                <Text style={[styles.time, unread > 0 && styles.timeUnread]}>{when}</Text>
               </View>
-              <View style={styles.taskLine}>
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {item.task.title}
-                </Text>
-                <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-                  <Text style={[styles.statusText, { color: status.fg }]}>{completed ? "Completed" : "Active"}</Text>
-                </View>
-              </View>
-              <View style={styles.previewLine}>
-                <Text
-                  style={[styles.preview, !last && styles.previewEmpty, unread > 0 && styles.previewUnread]}
-                  numberOfLines={1}
-                >
+              <Text style={styles.taskTitle} numberOfLines={1}>
+                {item.task.title}
+              </Text>
+              <View style={styles.line}>
+                <Text style={[styles.preview, !last && styles.previewEmpty, unread > 0 && styles.unreadStrong]} numberOfLines={1}>
                   {preview}
                 </Text>
                 {unread > 0 && (
@@ -100,7 +102,7 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: spacing.md, flexGrow: 1 },
+  listContent: { paddingHorizontal: spacing.md, flexGrow: 1, backgroundColor: colors.background },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -110,9 +112,15 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderStrong,
   },
   rowPressed: { opacity: 0.6 },
+  rowText: { flex: 1, gap: 2 },
+  line: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  name: { ...typography.bodyStrong, fontWeight: "500", color: colors.text, flex: 1 },
+  time: { fontSize: 12, color: colors.textFaint },
   timeUnread: { color: colors.primary, fontWeight: "600" },
-  previewLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  previewUnread: { fontWeight: "600" },
+  taskTitle: { fontSize: 13, color: colors.textMuted },
+  preview: { fontSize: 14, color: colors.textMuted, flex: 1 },
+  previewEmpty: { fontStyle: "italic" },
+  unreadStrong: { color: colors.text, fontWeight: "600" },
   unreadBubble: {
     minWidth: 20,
     height: 20,
@@ -123,14 +131,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   unreadText: { color: colors.white, fontSize: 11, fontWeight: "700" },
-  rowText: { flex: 1, gap: 3 },
-  topLine: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-  name: { ...typography.bodyStrong, color: colors.text, flex: 1 },
-  time: { fontSize: 12, color: colors.textFaint },
-  taskLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  taskTitle: { fontSize: 13, color: colors.textMuted, flexShrink: 1 },
-  statusPill: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.sm },
-  statusText: { fontSize: 10, fontWeight: "600" },
-  preview: { fontSize: 14, color: colors.text, flex: 1 },
-  previewEmpty: { color: colors.textFaint, fontStyle: "italic" },
 });

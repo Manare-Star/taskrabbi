@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { realtimeChannel, supabase } from "../supabase";
 import type { ChatMessage, ChatThread, Profile, Task } from "../types";
+import { TASK_COLUMNS } from "./tasks";
 
 const PARTICIPANTS_SELECT =
   "client:profiles!chat_threads_client_id_fkey(id, full_name, avatar_url), tasker:profiles!chat_threads_tasker_id_fkey(id, full_name, avatar_url)";
@@ -27,7 +28,9 @@ export function useMyThreads(userId: string | undefined) {
       // One round trip: each thread with its participants and only its newest message.
       const { data, error } = await supabase
         .from("chat_threads")
-        .select(`*, task:tasks(*), ${PARTICIPANTS_SELECT}, chat_messages(id, thread_id, sender_id, body, created_at)`)
+        .select(
+          `*, task:tasks(${TASK_COLUMNS}), ${PARTICIPANTS_SELECT}, chat_messages(id, thread_id, sender_id, body, created_at)`
+        )
         .or(`client_id.eq.${userId},tasker_id.eq.${userId}`)
         .order("created_at", { referencedTable: "chat_messages", ascending: false })
         .limit(1, { referencedTable: "chat_messages" });
@@ -79,7 +82,7 @@ export function useThread(threadId: string | undefined) {
     queryFn: async (): Promise<ThreadWithDetails> => {
       const { data, error } = await supabase
         .from("chat_threads")
-        .select(`*, task:tasks(*), ${PARTICIPANTS_SELECT}`)
+        .select(`*, task:tasks(${TASK_COLUMNS}), ${PARTICIPANTS_SELECT}`)
         .eq("id", threadId)
         .single();
       if (error) throw error;

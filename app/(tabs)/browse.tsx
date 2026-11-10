@@ -1,51 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
-import MapView, { Callout, Marker } from "react-native-maps";
+import { useMemo, useState } from "react";
+import { FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useNearbyTasks } from "../../lib/queries/tasks";
 import { TaskCard } from "../../components/TaskCard";
-import { colors, radius, shadow, spacing, typography } from "../../lib/theme";
+import { TaskMap } from "../../components/TaskMap";
+import { MIN_TOUCH, colors, radius, shadow, spacing, typography } from "../../lib/theme";
 import { TASK_CATEGORIES, type NearbyTask } from "../../lib/types";
 import { CategoryFilterChips } from "../../components/CategoryFilterChips";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/SkeletonCard";
 import { haptics } from "../../lib/haptics";
-import { formatMoney } from "../../lib/format";
+import { getErrorMessage } from "../../lib/errors";
+import { useDeviceLocation } from "../../lib/use-device-location";
 
 type ViewMode = "list" | "map";
 
-function hasCoords(task: NearbyTask): task is NearbyTask & { task_lat: number; task_lng: number } {
-  return Number.isFinite(task.task_lat) && Number.isFinite(task.task_lng);
-}
-
 export default function BrowseScreen() {
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const location = useDeviceLocation();
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<ViewMode>("list");
-  // Suburb or town name for the header, from the phone's own reverse geocoder. Optional.
-  const [placeName, setPlaceName] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setLocationError("Location permission denied. Enable it in Settings to see tasks near you.");
-        return;
-      }
-      const position = await Location.getCurrentPositionAsync({});
-      setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
-      try {
-        const [place] = await Location.reverseGeocodeAsync(position.coords);
-        setPlaceName(place?.district || place?.subregion || place?.city || null);
-      } catch {
-        // The header just leaves the place name out.
-      }
-    })();
-  }, []);
+  const place = location.data?.status === "ready" ? location.data : null;
+  const coords = useMemo(() => (place ? { lat: place.lat, lng: place.lng } : null), [place]);
+  const retryLocate = () => void location.refetch();
 
   const { data: tasks, isLoading, isRefetching, refetch, error } = useNearbyTasks({
     lat: coords?.lat ?? null,
@@ -54,19 +33,17 @@ export default function BrowseScreen() {
   });
 
   const filteredTasks = useMemo(() => {
-    if (!tasks) return tasks;
     const query = search.trim().toLowerCase();
-    if (!query) return tasks;
+    if (!tasks || !query) return tasks ?? [];
     return tasks.filter(
-      (task) => task.title.toLowerCase().includes(query) || task.description.toLowerCase().includes(query)
+      (task) =>
+        task.title.toLowerCase().includes(query) ||
+        task.description.toLowerCase().includes(query) ||
+        task.area_text.toLowerCase().includes(query)
     );
   }, [tasks, search]);
 
-  const pinnedTasks = useMemo(() => (filteredTasks ?? []).filter(hasCoords), [filteredTasks]);
-
-  if (locationError) {
-    return <EmptyState icon="location-outline" title="Location is off" subtitle={locationError} />;
-  }
+  const openTask = (taskId: string) => router.push(`/task/${taskId}`);
 
   const toggleMode = () => {
     haptics.select();
@@ -74,6 +51,30 @@ export default function BrowseScreen() {
   };
 
   const renderContent = () => {
+    if (location.data?.status === "denied") {
+      return (
+        <EmptyState
+          icon="location-outline"
+          title="Turn on location to see tasks near you"
+          subtitle="Siza uses your location only while the app is open, to find tasks in your area."
+          action={
+            location.data.canAskAgain
+              ? { label: "Allow location", onPress: retryLocate }
+              : { label: "Open settings", onPress: () => Linking.openSettings() }
+          }
+        />
+      );
+    }
+    if (location.isError) {
+      return (
+        <EmptyState
+          icon="location-outline"
+          title="Couldn't find your location"
+          subtitle="Check that location services are on, then try again."
+          action={{ label: "Try again", onPress: retryLocate }}
+        />
+      );
+    }
     if (!coords || isLoading) {
       return (
         <View style={styles.listContent}>
@@ -82,95 +83,104 @@ export default function BrowseScreen() {
       );
     }
     if (error) {
-      return <EmptyState icon="cloud-offline-outline" title="Couldn't load tasks" subtitle={(error as Error).message} />;
+      return (
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Couldn't load tasks"
+          subtitle={getErrorMessage(error)}
+          action={{ label: "Try again", onPress: () => refetch() }}
+        />
+      );
     }
 
     if (mode === "map") {
       return (
         <View style={styles.flex}>
-          <MapView
-            style={styles.flex}
-            initialRegion={{ latitude: coords.lat, longitude: coords.lng, latitudeDelta: 0.15, longitudeDelta: 0.15 }}
-            showsUserLocation
-          >
-            {pinnedTasks.map((task) => (
-              <Marker
-                key={task.id}
-                coordinate={{ latitude: task.task_lat, longitude: task.task_lng }}
-                pinColor={colors.primary}
-              >
-                <Callout onPress={() => router.push(`/task/${task.id}`)}>
-                  <View style={styles.callout}>
-                    <Text style={styles.calloutTitle} numberOfLines={1}>
-                      {task.title}
-                    </Text>
-                    <Text style={styles.calloutMeta}>
-                      {formatMoney(task.budget)} · {task.category}
-                    </Text>
-                    <Text style={styles.calloutLink}>View task</Text>
-                  </View>
-                </Callout>
-              </Marker>
-            ))}
-          </MapView>
-          {pinnedTasks.length === 0 && (
-            <View style={styles.mapNotice}>
-              <Text style={styles.mapNoticeText}>
-                {filteredTasks?.length
-                  ? "These tasks don't have map locations yet."
-                  : search
-                    ? "No tasks match your search."
-                    : "No open tasks nearby right now."}
-              </Text>
-            </View>
-          )}
+          <TaskMap center={coords} tasks={filteredTasks} onOpenTask={openTask} />
+          <View style={styles.mapNotice} pointerEvents="none">
+            <Text style={styles.mapNoticeText}>
+              {filteredTasks.length === 0
+                ? search
+                  ? "No tasks match your search."
+                  : "No open tasks nearby right now."
+                : "Pins show the general area. The exact address is shared only with the tasker who's hired."}
+            </Text>
+          </View>
         </View>
       );
     }
 
     return (
-      <FlatList
+      <FlatList<NearbyTask>
         data={filteredTasks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <EmptyState
-            icon={search ? "search-outline" : "map-outline"}
-            title={search ? "No matching tasks" : "No open tasks nearby"}
-            subtitle={search ? "Try a different search term." : "New tasks appear here as they're posted. Try another category."}
-          />
+          search ? (
+            <EmptyState
+              icon="search-outline"
+              title="No matching tasks"
+              subtitle="Try a different word, or clear the search."
+              action={{ label: "Clear search", onPress: () => setSearch("") }}
+            />
+          ) : (
+            <EmptyState
+              icon="map-outline"
+              title={category ? `No ${category.toLowerCase()} tasks nearby` : "No open tasks nearby"}
+              subtitle="New tasks appear here as they're posted. Pull down to refresh."
+              action={category ? { label: "Show all categories", onPress: () => setCategory(null) } : undefined}
+            />
+          )
         }
-        renderItem={({ item }) => <TaskCard task={item} onPress={() => router.push(`/task/${item.id}`)} />}
+        renderItem={({ item }) => <TaskCard task={item} onPress={() => openTask(item.id)} />}
       />
     );
   };
 
-  const count = filteredTasks?.length ?? 0;
-  const summary = !coords || isLoading ? "Finding tasks near you" : `${count} open`;
-  const tagline = placeName ? `${placeName} · ${summary}` : summary;
+  const count = filteredTasks.length;
+  const summary =
+    location.isLoading || location.isRefetching || (coords && isLoading)
+      ? "Finding tasks near you"
+      : coords
+        ? `${count} open ${count === 1 ? "task" : "tasks"}`
+        : "";
+  const tagline = [place?.placeName, summary].filter(Boolean).join(" · ");
 
   return (
     <View style={styles.flex}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tasks near you</Text>
-        <Text style={styles.headerSubtitle}>{tagline}</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Tasks near you
+        </Text>
+        <Text style={styles.headerSubtitle}>{tagline || " "}</Text>
       </View>
       <View style={styles.toolbar}>
         <View style={styles.searchRow}>
-          <Ionicons name="search-outline" size={17} color={colors.textFaint} />
+          <Ionicons name="search-outline" size={17} color={colors.placeholder} />
           <TextInput
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
             placeholder="Search tasks"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={colors.placeholder}
+            accessibilityLabel="Search tasks"
+            returnKeyType="search"
+            autoCorrect={false}
           />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={18} color={colors.placeholder} />
+            </Pressable>
+          )}
         </View>
         <Pressable
           style={({ pressed }) => [styles.modeButton, pressed && styles.pressed]}
           onPress={toggleMode}
-          accessibilityLabel={mode === "list" ? "Show map" : "Show list"}
+          accessibilityRole="button"
+          accessibilityLabel={mode === "list" ? "Show tasks on a map" : "Show tasks as a list"}
         >
           <Ionicons name={mode === "list" ? "map-outline" : "list-outline"} size={19} color={colors.text} />
         </Pressable>
@@ -184,7 +194,7 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, flexGrow: 1 },
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   headerTitle: { ...typography.h1, color: colors.text },
   headerSubtitle: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   toolbar: {
@@ -192,7 +202,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md - 4,
     marginBottom: spacing.xs,
   },
   searchRow: {
@@ -200,8 +210,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 1,
+    paddingHorizontal: spacing.md - 4,
+    height: MIN_TOUCH,
     backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -209,8 +219,8 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
   modeButton: {
-    width: 40,
-    height: 40,
+    width: MIN_TOUCH,
+    height: MIN_TOUCH,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -218,20 +228,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pressed: { opacity: 0.8 },
-  callout: { minWidth: 160, maxWidth: 220, padding: 4, gap: 2 },
-  calloutTitle: { ...typography.bodyStrong, fontSize: 14, color: colors.text },
-  calloutMeta: { fontSize: 12, color: colors.textMuted },
-  calloutLink: { fontSize: 12, color: colors.primary, fontWeight: "500", marginTop: 2 },
+  pressed: { opacity: 0.6 },
   mapNotice: {
     position: "absolute",
     left: spacing.md,
     right: spacing.md,
     bottom: spacing.md,
-    padding: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
     borderRadius: radius.md,
     ...shadow.raised,
   },
-  mapNoticeText: { ...typography.body, color: colors.textMuted, textAlign: "center" },
+  mapNoticeText: { fontSize: 13, lineHeight: 18, color: colors.textMuted, textAlign: "center" },
 });

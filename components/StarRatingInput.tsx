@@ -12,7 +12,12 @@ interface StarRatingInputProps {
 
 export function StarRatingInput({ value, onChange, size = 32, disabled = false }: StarRatingInputProps) {
   return (
-    <View style={styles.row}>
+    <View
+      style={styles.row}
+      accessible={disabled}
+      accessibilityLabel={disabled ? `${value} out of 5 stars` : undefined}
+      accessibilityRole={disabled ? "image" : "radiogroup"}
+    >
       {[1, 2, 3, 4, 5].map((star) => (
         <Pressable
           key={star}
@@ -22,6 +27,9 @@ export function StarRatingInput({ value, onChange, size = 32, disabled = false }
             onChange?.(star);
           }}
           hitSlop={8}
+          accessibilityRole="radio"
+          accessibilityLabel={`${star} ${star === 1 ? "star" : "stars"}`}
+          accessibilityState={{ selected: star === value }}
         >
           <Ionicons
             name={star <= value ? "star" : "star-outline"}

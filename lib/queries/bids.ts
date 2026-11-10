@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { realtimeChannel, supabase } from "../supabase";
 import type { Bid, BidWithTasker, ChatThread, Task } from "../types";
+import { TASK_COLUMNS } from "./tasks";
 
 export function useBidsForTask(taskId: string | undefined) {
   const queryClient = useQueryClient();
@@ -85,7 +86,7 @@ export function useMyBids(taskerId: string | undefined) {
     queryFn: async (): Promise<(Bid & { task: Task })[]> => {
       const { data, error } = await supabase
         .from("bids")
-        .select("*, task:tasks(*)")
+        .select(`*, task:tasks(${TASK_COLUMNS})`)
         .eq("tasker_id", taskerId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -111,22 +112,57 @@ export function useMyBids(taskerId: string | undefined) {
   return query;
 }
 
+// Places a bid. There's one bid row per tasker per task, so bidding again after withdrawing
+// (pass the withdrawn bid's id) revives that row with the new amount and message.
 export function usePlaceBid() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { taskId: string; taskerId: string; amount: number; message: string }) => {
+    mutationFn: async (input: {
+      taskId: string;
+      taskerId: string;
+      amount: number;
+      message: string;
+      withdrawnBidId?: string;
+    }) => {
+      const message = input.message.trim() || null;
+      const request = input.withdrawnBidId
+        ? supabase
+            .from("bids")
+            .update({ amount: input.amount, message, status: "pending" })
+            .eq("id", input.withdrawnBidId)
+        : supabase
+            .from("bids")
+            .insert({ task_id: input.taskId, tasker_id: input.taskerId, amount: input.amount, message });
+      const { data, error } = await request.select().single();
+      if (error) throw error;
+      return data as Bid;
+    },
+    onSuccess: (bid, variables) => {
+      queryClient.setQueryData(["my-bid", variables.taskId, variables.taskerId], bid);
+      queryClient.invalidateQueries({ queryKey: ["bids-for-task", variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ["my-bids", variables.taskerId] });
+    },
+  });
+}
+
+// Takes a pending bid back. The tasker can bid again while the task is still open.
+export function useWithdrawBid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (bid: Pick<Bid, "id" | "task_id" | "tasker_id">) => {
       const { data, error } = await supabase
         .from("bids")
-        .insert({ task_id: input.taskId, tasker_id: input.taskerId, amount: input.amount, message: input.message })
+        .update({ status: "withdrawn" })
+        .eq("id", bid.id)
         .select()
         .single();
       if (error) throw error;
       return data as Bid;
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["bids-for-task", variables.taskId] });
-      queryClient.invalidateQueries({ queryKey: ["my-bids", variables.taskerId] });
-      queryClient.invalidateQueries({ queryKey: ["my-bid", variables.taskId, variables.taskerId] });
+    onSuccess: (bid) => {
+      queryClient.setQueryData(["my-bid", bid.task_id, bid.tasker_id], bid);
+      queryClient.invalidateQueries({ queryKey: ["bids-for-task", bid.task_id] });
+      queryClient.invalidateQueries({ queryKey: ["my-bids", bid.tasker_id] });
     },
   });
 }
@@ -142,6 +178,8 @@ export function useAcceptBid() {
     onSuccess: (thread) => {
       queryClient.invalidateQueries({ queryKey: ["bids-for-task", thread.task_id] });
       queryClient.invalidateQueries({ queryKey: ["task", thread.task_id] });
+      queryClient.invalidateQueries({ queryKey: ["thread-for-task", thread.task_id] });
+      queryClient.invalidateQueries({ queryKey: ["my-posted-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["my-threads"] });
     },
   });

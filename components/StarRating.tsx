@@ -10,16 +10,18 @@ interface StarRatingProps {
 
 export function StarRating({ rating, count, size = 14 }: StarRatingProps) {
   return (
-    <View style={styles.row}>
-      <Ionicons name="star" size={size} color={colors.accent} />
-      <Text style={styles.text}>
-        {rating > 0 ? rating.toFixed(1) : "New"} {count > 0 ? `(${count})` : ""}
-      </Text>
+    <View
+      style={styles.row}
+      accessible
+      accessibilityLabel={count > 0 ? `Rated ${Number(rating).toFixed(1)} out of 5 from ${count} ${count === 1 ? "review" : "reviews"}` : "No reviews yet"}
+    >
+      <Ionicons name={count > 0 ? "star" : "star-outline"} size={size} color={count > 0 ? colors.accent : colors.textFaint} />
+      <Text style={styles.text}>{count > 0 ? `${Number(rating).toFixed(1)} (${count})` : "New"}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 4 },
-  text: { fontSize: 12, color: colors.textMuted },
+  text: { fontSize: 13, color: colors.textMuted },
 });

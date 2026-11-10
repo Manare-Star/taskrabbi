@@ -13,8 +13,12 @@ export const colors = {
   border: "#ECEEF0",
   borderStrong: "#D9DCE0",
   text: "#16181A",
-  textMuted: "#6B7280",
-  textFaint: "#9AA0A6",
+  // Secondary and tertiary text. Both pass WCAG AA (4.5:1) on white and on the surface
+  // greys, so they're safe for small text like timestamps (checked in __tests__/theme).
+  textMuted: "#5B6470",
+  textFaint: "#636B75",
+  // Placeholder text and decorative icons only: 3:1, too light for anything that must be read.
+  placeholder: "#8B929A",
   danger: "#B42318",
   dangerLight: "#FEF0EF",
   warning: "#9A5B05",
@@ -70,9 +74,13 @@ export const shadow = {
   button: {},
 };
 
+// Smallest comfortable touch target (Apple's 44pt guideline; Android's is 48dp).
+export const MIN_TOUCH = 44;
+
 export const statusColors: Record<string, { bg: string; fg: string }> = {
   open: { bg: colors.primaryLight, fg: colors.primaryDark },
   pending: { bg: colors.surfaceAlt, fg: colors.textMuted },
+  withdrawn: { bg: colors.surfaceAlt, fg: colors.textMuted },
   assigned: { bg: colors.warningLight, fg: colors.warning },
   accepted: { bg: colors.primaryLight, fg: colors.primaryDark },
   completed: { bg: colors.surfaceAlt, fg: colors.textMuted },

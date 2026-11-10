@@ -25,6 +25,8 @@ export interface PaystackCheckout {
   // Paystack redirects here when checkout ends; the app intercepts these, never loads them.
   callbackUrl: string;
   cancelUrl: string;
+  // True when the server is using a Paystack test key (no real money moves).
+  testMode?: boolean;
 }
 
 export function usePaymentForTask(taskId: string | undefined) {
@@ -41,9 +43,21 @@ export function usePaymentForTask(taskId: string | undefined) {
 
 // The paystack-initialize Edge Function holds the Paystack secret key (never in the app)
 // and returns a hosted checkout page for the accepted bid's amount.
-export function useStartPaystackCheckout() {
-  return useMutation({
-    mutationFn: (taskId: string) => invokeFunction<PaystackCheckout>("paystack-initialize", { taskId }),
+//
+// Each call starts a new Paystack transaction, so this runs once when the checkout screen
+// opens and never refetches by itself (no retry, focus or reconnect refetch, and nothing
+// cached for the next visit). `refetch` starts a fresh one after a failure.
+export function usePaystackCheckout(taskId: string | undefined) {
+  return useQuery({
+    queryKey: ["paystack-checkout", taskId],
+    queryFn: () => invokeFunction<PaystackCheckout>("paystack-initialize", { taskId }),
+    enabled: !!taskId,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 

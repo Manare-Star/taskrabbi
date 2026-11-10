@@ -1,40 +1,46 @@
+import type { ReactNode } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing, statusColors, typography } from "../lib/theme";
+import { colors, radius, spacing, typography } from "../lib/theme";
 import { categoryIcon } from "../lib/categories";
-import { formatMoney } from "../lib/format";
-import { describeSchedule, isOverdue } from "../lib/schedule";
+import { formatDistance, formatMoney } from "../lib/format";
+import { describeSchedule } from "../lib/schedule";
 import type { Task } from "../lib/types";
 import { Bouncy } from "./Bouncy";
+import { StatusPill, statusLabel } from "./StatusPill";
 
-interface TaskCardProps {
-  task: Task & { distance_meters?: number };
-  onPress?: () => void;
-}
-
-const STATUS_LABEL: Record<Task["status"], string> = {
-  open: "Open",
-  assigned: "Assigned",
-  completed: "Completed",
-  cancelled: "Cancelled",
+type CardTask = Pick<Task, "title" | "category" | "budget" | "status" | "area_text" | "image_url" | "scheduled_for"> & {
+  distance_meters?: number;
 };
 
-// One task as a list row: photo or category icon, title and price, then a single line of
-// details. Rows are separated by hairlines rather than drawn as cards.
-export function TaskCard({ task, onPress }: TaskCardProps) {
-  const status = statusColors[task.status];
-  const overdue = isOverdue(task.scheduled_for);
+interface TaskCardProps {
+  task: CardTask;
+  onPress?: () => void;
+  // Extra line under the details, e.g. the viewer's own bid on this task.
+  footer?: ReactNode;
+}
 
-  const details = [
-    task.category,
-    typeof task.distance_meters === "number" ? `${(task.distance_meters / 1000).toFixed(1)} km` : null,
-    describeSchedule(task.scheduled_for),
+// One task as a list row: photo or category icon, title and price, then where and when.
+// Rows are separated by hairlines rather than drawn as cards.
+export function TaskCard({ task, onPress, footer }: TaskCardProps) {
+  const where = [
+    task.area_text,
+    typeof task.distance_meters === "number" ? formatDistance(task.distance_meters) : null,
   ].filter(Boolean);
+  const what = [task.category, describeSchedule(task.scheduled_for)];
 
   return (
-    <Bouncy onPress={onPress} pressedScale={0.99} style={styles.row}>
+    <Bouncy
+      onPress={onPress}
+      pressedScale={0.99}
+      style={styles.row}
+      accessibilityRole="button"
+      accessibilityLabel={`${task.title}, ${formatMoney(task.budget)}, ${where.join(", ")}, ${what.join(", ")}${
+        task.status !== "open" ? `, ${statusLabel(task.status)}` : ""
+      }`}
+    >
       {task.image_url ? (
-        <Image source={{ uri: task.image_url }} style={styles.thumb} />
+        <Image source={{ uri: task.image_url }} style={styles.thumb} accessibilityIgnoresInvertColors />
       ) : (
         <View style={styles.iconBox}>
           <Ionicons name={categoryIcon(task.category)} size={20} color={colors.textMuted} />
@@ -48,12 +54,16 @@ export function TaskCard({ task, onPress }: TaskCardProps) {
           </Text>
           <Text style={styles.price}>{formatMoney(task.budget)}</Text>
         </View>
-        <Text style={[styles.details, overdue && styles.detailsPast]} numberOfLines={1}>
-          {details.join(" · ")}
+        <Text style={styles.details} numberOfLines={1}>
+          {where.join(" · ")}
         </Text>
-        {task.status !== "open" && (
-          <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.fg }]}>{STATUS_LABEL[task.status]}</Text>
+        <Text style={styles.details} numberOfLines={1}>
+          {what.join(" · ")}
+        </Text>
+        {(task.status !== "open" || footer) && (
+          <View style={styles.footer}>
+            {task.status !== "open" && <StatusPill status={task.status} />}
+            {footer}
           </View>
         )}
       </View>
@@ -71,10 +81,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderStrong,
     backgroundColor: colors.background,
   },
-  thumb: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  thumb: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   iconBox: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
@@ -82,12 +92,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  body: { flex: 1, gap: 3 },
+  body: { flex: 1, gap: 2 },
   titleRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm },
   title: { ...typography.bodyStrong, color: colors.text, flex: 1 },
   price: { ...typography.bodyStrong, color: colors.text },
-  details: { fontSize: 13, color: colors.textMuted },
-  detailsPast: { color: colors.textFaint },
-  statusPill: { alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm },
-  statusText: { fontSize: 11, fontWeight: "600" },
+  details: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  footer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm, marginTop: 4 },
 });

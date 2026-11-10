@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { colors, radius, spacing } from "../lib/theme";
 
 // Placeholder shaped like a TaskCard row while the list loads.
 export function SkeletonCard() {
-  const opacity = useRef(new Animated.Value(0.5)).current;
+  const [opacity] = useState(() => new Animated.Value(0.5));
 
   useEffect(() => {
     const loop = Animated.loop(

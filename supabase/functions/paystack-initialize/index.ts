@@ -115,6 +115,8 @@ Deno.serve(async (req) => {
       amount: acceptedBid.amount,
       callbackUrl: CALLBACK_URL,
       cancelUrl: CANCEL_URL,
+      // Lets the app show test-card instructions only when no real money can move.
+      testMode: secretKey.startsWith("sk_test_"),
     });
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);

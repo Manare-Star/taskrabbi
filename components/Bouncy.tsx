@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Animated, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 
 interface BouncyProps extends Omit<PressableProps, "style" | "children"> {
@@ -22,7 +22,7 @@ export function Bouncy({
   disabled,
   ...rest
 }: BouncyProps) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const easeTo = (toValue: number) =>
     Animated.timing(scale, { toValue, duration: toValue === 1 ? 140 : 90, useNativeDriver: true }).start();

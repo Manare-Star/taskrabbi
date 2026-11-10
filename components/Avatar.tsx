@@ -23,11 +23,11 @@ export function Avatar({ name, url, size = 40 }: AvatarProps) {
   const dimensions = { width: size, height: size, borderRadius: size / 2 };
 
   if (url) {
-    return <Image source={{ uri: url }} style={[styles.image, dimensions]} />;
+    return <Image source={{ uri: url }} style={[styles.image, dimensions]} accessibilityIgnoresInvertColors />;
   }
 
   return (
-    <View style={[styles.fallback, dimensions]}>
+    <View style={[styles.fallback, dimensions]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
       <Text style={[styles.initials, { fontSize: size * 0.36 }]}>{initialsOf(name)}</Text>
     </View>
   );
