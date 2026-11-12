@@ -1,7 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth-context";
-import { totalUnread, useUnreadCounts } from "../../lib/queries/chat";
+import { totalUnread, useMyThreads, useUnreadCounts } from "../../lib/queries/chat";
+import { useMyPostedTasks } from "../../lib/queries/tasks";
+import { useMyBids } from "../../lib/queries/bids";
+import { useNotifications } from "../../lib/queries/notifications";
+import { useDeviceLocation } from "../../lib/use-device-location";
 import { ActivityBell } from "../../components/ActivityBell";
 import { ScreenLoader } from "../../components/ScreenLoader";
 import { colors } from "../../lib/theme";
@@ -20,6 +24,13 @@ export default function TabsLayout() {
   const { session, profile, loading, recoveringPassword } = useAuth();
   // Mounted for as long as you're signed in, so the Messages badge stays live on every tab.
   const { data: unreadByThread } = useUnreadCounts(profile?.id);
+  // Start every tab's data loading at sign-in (and keep it live), so switching to a tab
+  // shows its content at once instead of a loading placeholder.
+  useMyPostedTasks(profile?.id);
+  useMyBids(profile?.id);
+  useMyThreads(profile?.id);
+  useNotifications(profile?.id);
+  useDeviceLocation();
   const unreadMessages = totalUnread(unreadByThread);
 
   if (loading) return <ScreenLoader />;

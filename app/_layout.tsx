@@ -15,9 +15,9 @@ import { OfflineBanner } from "../components/OfflineBanner";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Realtime subscriptions keep on-screen data fresh; this just avoids refetching the
-      // same thing when two screens mount within moments of each other.
-      staleTime: 15_000,
+      // Realtime subscriptions keep this data fresh, so coming back to a screen shows what's
+      // cached instead of refetching it; pull-to-refresh is always there.
+      staleTime: 60_000,
       // Retry a dropped connection, not a refusal: a "permission denied" won't change.
       retry: (failureCount, error) => failureCount < 2 && isNetworkError(error),
     },
